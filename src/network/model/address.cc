@@ -125,7 +125,13 @@ Address::CheckCompatible (uint8_t type, uint8_t len) const
   NS_ASSERT (len <= MAX_SIZE);
   /// \internal
   /// Mac address type/length detection is discussed in \bugid{1568}
-  return (m_len == len && m_type == type) || (m_len >= len && m_type == 0);
+
+  //changed by jzl at 20210527 begin
+  //return (m_len == len && m_type == type) || (m_len >= len && m_type == 0);
+  return (m_len == len && m_type == type) || (m_len >= len && m_type == 0)|| (m_len < len && m_type == 0);
+  //changed by jzl at 20210527 end
+
+
 }
 bool 
 Address::IsMatchingType (uint8_t type) const

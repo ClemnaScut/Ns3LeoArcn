@@ -62,7 +62,7 @@ QueueBase::GetTypeId (void)
                    "Use the MaxSize attribute instead")
     .AddAttribute ("MaxSize",
                    "The max queue size",
-                   QueueSizeValue (QueueSize ("100p")),
+                   QueueSizeValue (QueueSize ("0p")),
                    MakeQueueSizeAccessor (&QueueBase::SetMaxSize,
                                           &QueueBase::GetMaxSize),
                    MakeQueueSizeChecker ())

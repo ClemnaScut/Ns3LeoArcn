@@ -30,8 +30,12 @@ NS_OBJECT_ENSURE_REGISTERED (WifiMac);
 Time
 WifiMac::GetDefaultMaxPropagationDelay (void)
 {
-  //1000m
-  return Seconds (1000.0 / 300000000.0);
+	//changed by jzl at20221210 begin
+    //  //1000m
+    //  return Seconds (1000.0 / 300000000.0);
+    //  //5000m
+        return Seconds (5000.0 / 300000000.0);
+    //changed by jzl at20221210 end
 }
 
 Time
