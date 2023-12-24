@@ -202,7 +202,7 @@ TrafficControlLayer::SetRootQueueDiscOnDevice (Ptr<NetDevice> device, Ptr<QueueD
       // Since queue discs require that a netdevice queue interface is aggregated
       // to the device, call SetupDevice
       SetupDevice (device);
-      ndi = m_netDevices.find (device);
+      ndi = m_netDevices.find (device); 
       NS_ASSERT (ndi != m_netDevices.end ());
     }
 

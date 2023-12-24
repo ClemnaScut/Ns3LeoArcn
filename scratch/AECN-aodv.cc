@@ -19,7 +19,6 @@
 #include "ns3/stats-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/aodv-module.h"
-#include "ns3/aecn-module.h"
 #include "ns3/tag.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
@@ -55,7 +54,6 @@
 #include <random>
 
 using namespace ns3;
-using namespace aecn;
 
 NS_LOG_COMPONENT_DEFINE ("aecntest");
 
@@ -204,12 +202,11 @@ private:
 int main (int argc, char **argv)
 {
   AecnExample test;
-//  LogComponentEnableAll(LOG_PREFIX_ALL);
-//	LogComponentEnable("aecntest", LOG_LEVEL_INFO);
-//	LogComponentEnableAll(LOG_PREFIX_TIME);
-//	LogComponentEnableAll(LOG_PREFIX_NODE);
-//	LogComponentEnableAll(LOG_PREFIX_FUNC);
-//	LogComponentEnableAll(LOG_PREFIX_LEVEL);
+ LogComponentEnableAll(LOG_PREFIX_ALL);
+	LogComponentEnableAll(LOG_PREFIX_TIME);
+	LogComponentEnableAll(LOG_PREFIX_NODE);
+	LogComponentEnableAll(LOG_PREFIX_FUNC);
+	LogComponentEnableAll(LOG_PREFIX_LEVEL);
 
   if (!test.Configure (argc, argv))
     NS_FATAL_ERROR ("Configuration failed. Aborted.");
@@ -217,7 +214,7 @@ int main (int argc, char **argv)
 //	 LogComponentEnable("UanPhyGen", LOG_LEVEL_ALL);
 //	 LogComponentEnable("UanNetDevice", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("UanChannel", LOG_LEVEL_ALL);
-//	 LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
+	 LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("aecnRoutingProtocol", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("V4Ping", LOG_LEVEL_ALL);
 //	 LogComponentEnable("WifiPhy", LOG_LEVEL_ALL);

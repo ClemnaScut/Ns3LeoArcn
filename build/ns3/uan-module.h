@@ -17,6 +17,7 @@
 #include "uan-mac-cw.h"
 #include "uan-mac-rc-gw.h"
 #include "uan-mac-rc.h"
+#include "uan-mac-sfama.h"
 #include "uan-mac.h"
 #include "uan-net-device.h"
 #include "uan-noise-model-default.h"

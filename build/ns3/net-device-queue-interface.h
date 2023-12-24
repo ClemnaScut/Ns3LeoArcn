@@ -192,6 +192,24 @@ public:
                                Ptr<NetDeviceQueueInterface> ndqi,
                                uint8_t txq, Ptr<const Item> item);
 
+  //added by ljy
+// template <typename QueueType>
+// void
+// ConnectQueueTraces(Ptr<QueueType> queue)
+// {
+//     NS_ASSERT(queue);
+ 
+//     queue->TraceConnectWithoutContext(
+//         "Enqueue",
+//         MakeCallback(&NetDeviceQueue::PacketEnqueued<QueueType>, this).Bind(PeekPointer(queue)));
+//     queue->TraceConnectWithoutContext(
+//         "Dequeue",
+//         MakeCallback(&NetDeviceQueue::PacketDequeued<QueueType>, this).Bind(PeekPointer(queue)));
+//     queue->TraceConnectWithoutContext(
+//         "DropBeforeEnqueue",
+//         MakeCallback(&NetDeviceQueue::PacketDiscarded<QueueType>, this).Bind(PeekPointer(queue)));
+// }
+
 private:
   bool m_stoppedByDevice;         //!< True if the queue has been stopped by the device
   bool m_stoppedByQueueLimits;    //!< True if the queue has been stopped by a queue limits object

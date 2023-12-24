@@ -110,6 +110,8 @@ main (int argc, char *argv[])
   NetDeviceContainer staDevices;
   staDevices = wifi.Install (phy, mac, wifiStaNodes);
 
+
+
   mac.SetType ("ns3::ApWifiMac",
                "Ssid", SsidValue (ssid));
 

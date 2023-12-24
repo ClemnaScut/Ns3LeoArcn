@@ -146,6 +146,7 @@ NetDeviceQueue::GetQueueLimits ()
 }
 
 
+
 NS_OBJECT_ENSURE_REGISTERED (NetDeviceQueueInterface);
 
 TypeId NetDeviceQueueInterface::GetTypeId (void)
