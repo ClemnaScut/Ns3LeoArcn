@@ -54,6 +54,7 @@ struct vbf_neighborhood{
   /*创建了一个长度为MAX_NEIGHBOR的Vector数组，比如neighbor[0]为数组首元素，它是一个Vector对象，
   存放了三维信息：neighbor[0].x，neighbor[0].y，neighbor[0].z*/
   Vector neighbor[MAX_NEIGHBOR]; 
+  double neighborFactor[MAX_NEIGHBOR];
 };
 
 typedef std::pair<Ipv4Address, unsigned int> hash_entry; 
@@ -78,8 +79,8 @@ public:
   //m_htable表能够存放的entry数目
   int  m_windowSize; 
   void Reset();
-  void PutInHash(Ipv4Address sAddr, unsigned int pkNum);
-  void PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p);
+  // void PutInHash(Ipv4Address sAddr, unsigned int pkNum, double);
+  void PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p, double factor);
   vbf_neighborhood* GetHash(Ipv4Address senderAddr, unsigned int pkt_num);
 }; 
 
@@ -211,7 +212,7 @@ private:
    * \param pkt 传入的带有vbf头部的vbfpacket
    * \param receiver 接收到这个vbfpacket的地址，即本节点地址
   */
-  void ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver);
+  void ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver, double range, double speed);
 
 
   /**
@@ -239,7 +240,7 @@ private:
    * 在节点第一次收到packet时，并发现自己是转发节点时，会调用该函数计算出Tadaptation Delay
    * \param pkt 传入带有vbf头部的vbfpacket
   */
-  double CalculateDelay(Ptr<Packet> pkt);
+  double CalculateDelay(Ptr<Packet> pkt, double range, double speed);
 
 
   /**
@@ -247,7 +248,7 @@ private:
    * \param pkt 传入带有vbf头部的vbfpacket
    * \param neighborPos 邻居位置
   */
-  double CalculateNeighborFactor(Ptr<Packet> pkt, Vector neighborPos);
+  double CalculateNeighborFactor(Ptr<Packet> pkt, Vector neighborPos, double range);
 
 
   /**
@@ -263,6 +264,11 @@ private:
    * \param pkt 传入带有vbf头部的vbfpacket
   */
   void Timeout(Ptr<Packet> pkt);
+
+  /**
+   * 如果本节点是卫星节点则返回true
+  */
+  bool IsSatellite(Ptr<Node> node);
 
 };
 

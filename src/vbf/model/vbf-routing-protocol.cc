@@ -86,67 +86,68 @@ AquaSimPktHashTable::GetHash(Ipv4Address senderAddr, unsigned int pk_num)
   return it->second;
 }
 
-/// @brief 参考另一个PutInHash函数
-/// @param sAddr source ip address of vbfpacket
-/// @param pkNum pk number of vbfpacket
-void
-AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum)
-{
+// /// @brief 参考另一个PutInHash函数
+// /// @param sAddr source ip address of vbfpacket
+// /// @param pkNum pk number of vbfpacket
+// void
+// AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum, double factor)
+// {
 
-	vbf_neighborhood* hashPtr;
+// 	vbf_neighborhood* hashPtr;
 
-  hash_entry entry = std::make_pair (sAddr,pkNum);
-  std::map<hash_entry,vbf_neighborhood*>::iterator it;
+//   hash_entry entry = std::make_pair (sAddr,pkNum);
+//   std::map<hash_entry,vbf_neighborhood*>::iterator it;
 
-	int k=pkNum-m_windowSize;
-	if(k>0)
-	{
-		for (int i=0; i<k; i++)
-		{
-      entry.second = i;
-      it = m_htable.find(entry);
-      if(it != m_htable.end())
-      {
-        hashPtr = it->second;
-        delete hashPtr;
-        m_htable.erase(it);
-      }
-		}
-	}
+// 	int k=pkNum-m_windowSize;
+// 	if(k>0)
+// 	{
+// 		for (int i=0; i<k; i++)
+// 		{
+//       entry.second = i;
+//       it = m_htable.find(entry);
+//       if(it != m_htable.end())
+//       {
+//         hashPtr = it->second;
+//         delete hashPtr;
+//         m_htable.erase(it);
+//       }
+// 		}
+// 	}
 
-  entry.second = pkNum;
-  hashPtr = GetHash(sAddr,pkNum);
-	if (hashPtr != NULL) { 
-		int m=hashPtr->number;
-		if (m<MAX_NEIGHBOR) {
-			hashPtr->number++;
-			hashPtr->neighbor[m].x=0;
-			hashPtr->neighbor[m].y=0;
-			hashPtr->neighbor[m].z=0;
-		}
-		return;
-	}
-	hashPtr=new vbf_neighborhood[1];
-	hashPtr[0].number=1;
-	hashPtr[0].neighbor[0].x=0;
-	hashPtr[0].neighbor[0].y=0;
-	hashPtr[0].neighbor[0].z=0;
-  std::pair<hash_entry,vbf_neighborhood*> newPair;
-  newPair.first=entry; newPair.second=hashPtr;
-  if (m_htable.insert(newPair).second == false)
-  {
-    delete newPair.second;
-  }
-}
+//   entry.second = pkNum;
+//   hashPtr = GetHash(sAddr,pkNum);
+// 	if (hashPtr != NULL) { 
+// 		int m=hashPtr->number;
+// 		if (m<MAX_NEIGHBOR) {
+// 			hashPtr->number++;
+// 			hashPtr->neighbor[m].x=0;
+// 			hashPtr->neighbor[m].y=0;
+// 			hashPtr->neighbor[m].z=0;
+// 		}
+// 		return;
+// 	}
+// 	hashPtr=new vbf_neighborhood[1];
+// 	hashPtr[0].number=1;
+// 	hashPtr[0].neighbor[0].x=0;
+// 	hashPtr[0].neighbor[0].y=0;
+// 	hashPtr[0].neighbor[0].z=0;
+//   std::pair<hash_entry,vbf_neighborhood*> newPair;
+//   newPair.first=entry; newPair.second=hashPtr;
+//   if (m_htable.insert(newPair).second == false)
+//   {
+//     delete newPair.second;
+//   }
+// }
 
 /// @brief 将一个packet-neighborhood信息放入HashTable中
 /// @param sAddr source ip address of vbfpacket
 /// @param pkNum pk number of vbfpacket
 /// @param p forwarder position(neighborhood position)
 void
-AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p)
+AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p, double factor)
 {
-  NS_LOG_DEBUG("PutinHash begin:" << sAddr << "," << pkNum << ",(" << p.x << "," << p.y << "," << p.z << ")");
+  NS_LOG_DEBUG("PutinHash begin:" << sAddr << "," << pkNum << ",(" << p.x << "," << p.y << "," << p.z << "), factor: "
+                  << factor);
 	
   vbf_neighborhood* hashPtr;
   hash_entry entry = std::make_pair (sAddr,pkNum);
@@ -178,6 +179,7 @@ AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p)
 			hashPtr->neighbor[m].x=p.x;
 			hashPtr->neighbor[m].y=p.y;
 			hashPtr->neighbor[m].z=p.z;
+      hashPtr->neighborFactor[m] = factor;
 		}
 		return;
 	}
@@ -187,6 +189,7 @@ AquaSimPktHashTable::PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p)
 	hashPtr[0].neighbor[0].x=p.x;
 	hashPtr[0].neighbor[0].y=p.y;
 	hashPtr[0].neighbor[0].z=p.z;
+  hashPtr[0].neighborFactor[0]=factor;
 
   std::pair<hash_entry,vbf_neighborhood*> newPair;
   newPair.first=entry; newPair.second=hashPtr;
@@ -228,12 +231,12 @@ RoutingProtocol::GetTypeId (void)
       IntegerValue(1),
       MakeIntegerAccessor(&RoutingProtocol::m_enableRouting),
       MakeIntegerChecker<int>())
-    .AddAttribute ("Width", "Width of VBF. Default is 1000.",
-      DoubleValue(1000),
+    .AddAttribute ("Width", "Width of VBF. Default is 30000.",
+      DoubleValue(30000),
       MakeDoubleAccessor(&RoutingProtocol::m_width),
       MakeDoubleChecker<double>())
     .AddAttribute ("TransRange", "TransRange of the UnderWaterNode. Default is 25000.",
-      DoubleValue(30000),
+      DoubleValue(25000),
       MakeDoubleAccessor(&RoutingProtocol::m_TransRange),
       MakeDoubleChecker<double>())
     .AddAttribute ("SoundSpeed", "Sound Speed. Default is 1500m/s",
@@ -541,7 +544,7 @@ RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header,
                   << ",packet number is:" << vbf.GetPkNum() << ",packet genarate time is:"<< vbf.GetTimeGenerate().GetSeconds()
                   << ",packet forwarded time is:" << vbf.GetTimeForward().GetSeconds());
     
-    Simulator::Schedule(Seconds(1),&RoutingProtocol::vbfSend, this, vbfpacket, myaddr, dst);
+    Simulator::Schedule(Seconds(0),&RoutingProtocol::vbfSend, this, vbfpacket, myaddr, dst);
     return Ptr<Ipv4Route> ();
   }
   else
@@ -765,19 +768,47 @@ RoutingProtocol::RecvVBF(Ptr<Socket> socket)
   Ipv4Address myAddr = receiver; //当前节点ip
 
 
+  //判断是自己的哪个网卡拿到了这个packet，以此来得到对应传播范围
+  uint32_t iif = m_ipv4->GetInterfaceForAddress(myAddr);
+  Ipv4InterfaceAddress iface = m_ipv4->GetAddress (iif, 0); 
+  double Range;
+  double Speed;
+  if(iface.GetBroadcast() == Ipv4Address("10.1.1.255"))
+  {
+    Range = 25000;
+    Speed = 1500;
+  }
+  else if(iface.GetBroadcast() == Ipv4Address("10.1.2.255"))
+  {
+    Range = 50000;
+    Speed = 300000000;
+  }
+  else if(iface.GetBroadcast() == Ipv4Address("10.1.3.255"))
+  {
+    Range = 2500000;
+    Speed = 300000000;
+  }
+  else
+  {
+    NS_ASSERT("not the vaild address");
+  }
+
   vbf_neighborhood *hashPtr= PktTable.GetHash(vbf.GetSenderAddr(), vbf.GetPkNum());
 	//一个节点可能会从不同的邻居处收到这个packet，所以检查是否曾经收到过这个packet，因为sourceIp和pkNum会唯一标识一个packet
   if (hashPtr != NULL) 
   {
-    PktTable.PutInHash(vbf.GetSenderAddr(), vbf.GetPkNum(),forwarderPos);
+    double factor = CalculateNeighborFactor(packet,forwarderPos,Range);
+    PktTable.PutInHash(vbf.GetSenderAddr(), vbf.GetPkNum(),forwarderPos, factor);
     packet=0;
     return;
 	}
 	else {
 		// Never receive it before ? Put in hash table.
 		//printf("vectrobasedforward: this is new packet\n");
-		PktTable.PutInHash(vbf.GetSenderAddr(), vbf.GetPkNum(),forwarderPos);
-    ConsiderNew(packet,myAddr);
+    double factor = CalculateNeighborFactor(packet,forwarderPos,Range);
+		PktTable.PutInHash(vbf.GetSenderAddr(), vbf.GetPkNum(),forwarderPos, factor);
+
+    ConsiderNew(packet,myAddr,Range,Speed);
   }
 
 
@@ -785,9 +816,10 @@ RoutingProtocol::RecvVBF(Ptr<Socket> socket)
 
 
 void
-RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver)
+RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver, double range, double speed)
 {
   NS_LOG_FUNCTION (this << receiver << pkt);
+  NS_LOG_DEBUG("the range of receive node: " << range);
   vbfHeader vbf;
   Ptr<Packet> packet = pkt->Copy();
   packet->PeekHeader(vbf);
@@ -810,8 +842,12 @@ RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver)
     if(IsCloseEnough(packet)) //节点位于路由管道内部
     {
       //计算最终的Tadaptation Delay
-			double Delay = CalculateDelay(pkt); 
+      double Delay = CalculateDelay(pkt, range,speed); 
       SetDelayTimer(packet, Delay);
+    }
+    else if(IsSatellite(myNode)) //卫星节点，测试代码
+    {
+      SetDelayTimer(packet, 0);
     }
     else //节点不在路由管道，直接抛弃packet
     {
@@ -823,9 +859,22 @@ RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver)
 }
 
 bool
+RoutingProtocol::IsSatellite(Ptr<Node> node)
+{
+  if(node->GetObject<MobilityModel>()->GetPosition().z > 1000000)
+  return true;
+  else return false;
+}
+
+bool
 RoutingProtocol::IsCloseEnough(Ptr<Packet> pkt)
 {
-  if ((Projection(pkt) <= m_width))  return true;
+  NS_LOG_FUNCTION (this); 
+  if ((Projection(pkt) <= m_width))  
+  {
+    NS_LOG_DEBUG("the Node is Close Enough");
+    return true;
+  }
   else return false;
 }
 
@@ -902,7 +951,7 @@ RoutingProtocol::Projection(Ptr<Packet> pkt)
 
 
 double
-RoutingProtocol::CalculateDelay(Ptr<Packet> pkt)
+RoutingProtocol::CalculateDelay(Ptr<Packet> pkt, double range, double speed)
 {
   NS_LOG_FUNCTION (this);
   vbfHeader vbf;
@@ -937,6 +986,8 @@ RoutingProtocol::CalculateDelay(Ptr<Packet> pkt)
 
 
   //利用cos_theta和projection去计算factor
+  m_TransRange = range;
+  m_SoundSpeed = speed;
   double p = Projection(pkt);
   double factor = (p/m_width)+(m_TransRange-length_f2m*cos_theta)/m_TransRange;
   NS_ASSERT(factor>=0);
@@ -946,12 +997,13 @@ RoutingProtocol::CalculateDelay(Ptr<Packet> pkt)
 
   //计算最终的Tadaptation Delay
   double Delay = sqrt(factor)*DELAY_PRE + (m_TransRange-length_f2m)/m_SoundSpeed; //wifi和uan的m_TransRange不一样，所以会导致delay=负数
+  NS_LOG_DEBUG("Calculate Delay = " << Delay);
   NS_ASSERT(Delay>=0);
   return Delay;
 }
 
 double
-RoutingProtocol::CalculateNeighborFactor(Ptr<Packet> pkt, Vector neighborPos)
+RoutingProtocol::CalculateNeighborFactor(Ptr<Packet> pkt, Vector neighborPos, double range)
 {
   NS_LOG_FUNCTION (this);
   vbfHeader vbf;
@@ -980,7 +1032,11 @@ RoutingProtocol::CalculateNeighborFactor(Ptr<Packet> pkt, Vector neighborPos)
   if(length_f2m==0 || length_f2t==0){cos_theta = 0;}
   else{cos_theta = f2mf2t/(length_f2m*length_f2t);}
 
+  //根据邻居的位置去判断是哪个接受网卡，以此得到范围
+
   //利用cos_theta和projection去计算factor
+  
+  m_TransRange = range;
   double p = Projection(pkt);
   double factor = (p/m_width)+(m_TransRange-length_f2m*cos_theta)/m_TransRange;
   NS_LOG_DEBUG( " Calculate Neighbor fator is " << factor);
@@ -1020,12 +1076,12 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
       else //计算min(factor0,factor1,...,factorN)，若小于m_priority/(2^N) 则转发
       {
         double minFactor;
-        Vector neighborPos;
+        // Vector neighborPos;
         // Ptr<Node> neighborNode;
         for(int i=0; i<num_neighbor; i++)
         {
-          neighborPos = hashPtr->neighbor[i];
-          double neighborFactor = CalculateNeighborFactor(packet,neighborPos);
+          // neighborPos = hashPtr->neighbor[i];
+          double neighborFactor = hashPtr->neighborFactor[i];
           if(i == 0)
           {
             minFactor = neighborFactor;
@@ -1038,9 +1094,11 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
             }
           }
         }
+        NS_LOG_DEBUG( num_neighbor << " Neighbor Factor and the min Factor is: " << minFactor);
 
         if(minFactor < (m_priority/pow(2,num_neighbor-1)))//进行转发
         {
+          NS_LOG_DEBUG("the Node can be a Forwarding Node");
           //可能会从多个网卡处转发出去，所以vbfpacket中存放的forwarderIp会不一样
           for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j =
                m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
@@ -1066,7 +1124,10 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
                 {
                   destination = iface.GetBroadcast ();
                 }
-              Simulator::Schedule (Seconds(0), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
+            //需要设定一个随机延时，避免碰撞
+              uint32_t sendTime= m_uniformRandomVariable->GetInteger (0, 5);
+              NS_LOG_DEBUG("Set send delay: " << sendTime);
+              Simulator::Schedule (Seconds(sendTime), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
 
             }
         }
@@ -1079,6 +1140,7 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
     }
     else //num_neighbor=1，即该forwarder是唯一邻居
     {
+      NS_LOG_DEBUG("the Node can be a Forwarding Node(as the onlyNeighbor)");
       for (std::map<Ptr<Socket>, Ipv4InterfaceAddress>::const_iterator j =
           m_socketAddresses.begin (); j != m_socketAddresses.end (); ++j)
       {
@@ -1103,7 +1165,9 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
         {
           destination = iface.GetBroadcast ();
         }
-        Simulator::Schedule (Seconds(0), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
+        uint32_t sendTime= m_uniformRandomVariable->GetInteger (0, 5);
+        NS_LOG_DEBUG("Set send delay: " << sendTime);
+        Simulator::Schedule (Seconds(sendTime), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
       }
     }
 
