@@ -870,7 +870,12 @@ bool
 RoutingProtocol::IsCloseEnough(Ptr<Packet> pkt)
 {
   NS_LOG_FUNCTION (this); 
-  if ((Projection(pkt) <= m_width))  
+  // if ((Projection(pkt) <= m_width))   //正常管道
+  // {
+  //   NS_LOG_DEBUG("the Node is Close Enough");
+  //   return true;
+  // }
+  if(Distance(pkt) <= m_width)  //适应卫星的特殊化管道
   {
     NS_LOG_DEBUG("the Node is Close Enough");
     return true;
@@ -948,6 +953,44 @@ RoutingProtocol::Projection(Ptr<Packet> pkt)
   }
 
 }
+
+double
+RoutingProtocol::Distance(Ptr<Packet> pkt)
+{
+  NS_LOG_FUNCTION (this);
+  vbfHeader vbf;
+  Ptr<Packet> packet = pkt->Copy();
+  packet->PeekHeader(vbf);
+
+  Ipv4Address senderAddr = vbf.GetSenderAddr();
+  Ipv4Address forwarderAddr = vbf.GetForwardAddr();
+  Ipv4Address targetAddr = vbf.GetTargetAddr();
+
+  Ptr<Node> senderNode = GetNodeWithIpv4Address(senderAddr);
+  Ptr<Node> forwarderNode = GetNodeWithIpv4Address(forwarderAddr);
+  Ptr<Node> targetNode = GetNodeWithIpv4Address(targetAddr);
+  Ptr<Node> myNode =  m_ipv4->GetObject<Node>();
+
+  Vector senderPos = senderNode->GetObject<MobilityModel>()->GetPosition();
+  // Vector forwarderPos = forwarderNode->GetObject<MobilityModel>()->GetPosition();
+  Vector targetPos = targetNode->GetObject<MobilityModel>()->GetPosition();
+  Vector myPos = myNode->GetObject<MobilityModel>()->GetPosition();
+
+
+  //the vector from sender to target
+  Vector s2t = targetPos - senderPos;
+
+  Vector n = {s2t.y, -s2t.x, 0};
+  double lengthN = n.GetLength();
+  n = {s2t.y/lengthN, -s2t.x/lengthN, 0}; //归一化
+  double distance = fabs(n.x*(myPos.x-senderPos.x)+n.y*(myPos.y-senderPos.y)+0)/n.GetLength();
+
+  NS_LOG_DEBUG("Node " << myNode->GetId() << " Distance is " << distance);
+
+  return distance;
+  
+}
+
 
 
 double

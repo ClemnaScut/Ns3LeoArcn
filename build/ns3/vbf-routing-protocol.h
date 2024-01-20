@@ -223,7 +223,7 @@ private:
 
 
   /**
-   * 判断节点是否位于路由管道内
+   * 判断节点是否位于路由管道内，根据点到直线的距离去判断
    * \param pkt 传入带有vbf头部的vbfpacket
   */
   bool IsCloseEnough(Ptr<Packet> pkt);
@@ -234,6 +234,12 @@ private:
    * \param pkt 传入带有vbf头部的vbfpacket
   */
   double Projection(Ptr<Packet> pkt);
+
+  /**
+   * 计算节点距离路由平面的垂直距离
+   * \param pkt 传入带有vbf头部的vbfpacket
+  */
+  double Distance(Ptr<Packet> pkt);
 
 
   /**

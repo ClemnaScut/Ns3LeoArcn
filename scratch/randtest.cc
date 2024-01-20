@@ -28,32 +28,18 @@ NS_LOG_COMPONENT_DEFINE ("ScratchSimulator");
 int 
 main (int argc, char *argv[])
 {
-  CommandLine cmd;
-  cmd.Parse(argc,argv);
-  RngSeedManager::SetSeed(12345);
 
-  Ptr<RandomVariableStream> uv = CreateObjectWithAttributes<UniformRandomVariable>("Min",DoubleValue(0),"Max",DoubleValue(10));
-  Ptr<ExponentialRandomVariable> ev = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(10));
-  NS_LOG_UNCOND ("Scratch Simulator");
+    Vector myPos{5,5,200000};
+    Vector senderPos{0,0,0};
+    Vector s2t{10,10,0};
 
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-  NS_LOG_UNCOND (uv->GetValue());
-
-  NS_LOG_UNCOND ("Scratch Simulator");
-  NS_LOG_UNCOND (ev->GetValue());
-  NS_LOG_UNCOND (ev->GetValue());
-  NS_LOG_UNCOND (ev->GetValue());
-  NS_LOG_UNCOND (ev->GetValue());
-  NS_LOG_UNCOND (ev->GetValue());
-  NS_LOG_UNCOND (ev->GetValue());
-
-
+    Vector n = {s2t.y, -s2t.x, 0};
+    double lengthN = n.GetLength();
+    n = {s2t.y/lengthN, -s2t.x/lengthN, 0}; //归一化
+    std::cout << "n: " << n.x << ' ' << n.y << ' ' << n.z << std::endl;
   
+    double distance = fabs(n.x*(myPos.x-senderPos.x)+n.y*(myPos.y-senderPos.y)+0)/n.GetLength();
+    std::cout << distance << std::endl;
 
   Simulator::Run ();
   Simulator::Destroy ();
