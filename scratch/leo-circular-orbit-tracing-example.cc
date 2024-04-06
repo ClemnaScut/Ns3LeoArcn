@@ -30,7 +30,7 @@ void CourseChange (std::string context, Ptr<const MobilityModel> position)
 {
   Vector pos = position->GetPosition ();
   Ptr<const Node> node = position->GetObject<Node> ();
-  std::cout << Simulator::Now().GetSeconds() << " node:" << node->GetId () << "   x:" << pos.x << "   y:" << pos.y << "   z:" << pos.z << "   v:" << position->GetVelocity ().GetLength() << std::endl;
+  std::cout << Simulator::Now () << " " << node->GetId () << " " << pos.x << " " << pos.y << " " << pos.z << " " << position->GetVelocity ().GetLength() << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -47,28 +47,16 @@ int main(int argc, char *argv[])
 
   LeoOrbitNodeHelper orbit;
   NodeContainer satellites;
-  satellites.Create(1);
-  // if (!orbitFile.empty())
-  //   {
-  //     satellites = orbit.Install (orbitFile);
-  //   }
-  // else
-  //   {
-  //     satellites = orbit.Install ({ LeoOrbit (1200, 20, 32, 16),
-  //     				  LeoOrbit (1180, 30, 12, 10) });  //sateNumber = 32*16 + 12*10
-  //   }
+  if (!orbitFile.empty())
+    {
+      satellites = orbit.Install (orbitFile);
+    }
+  else
+    {
+      satellites = orbit.Install ( LeoOrbit (1200, 20, 1, 1));
+    }
 
-    NS_LOG_DEBUG("-----------Initializing Position-----------");
-    MobilityHelper mobility;
-    Ptr<ListPositionAllocator> nodesPositionAlloc = CreateObject<ListPositionAllocator> ();
-    nodesPositionAlloc->Add (Vector(0, 0, 2000000));
-
-
-    mobility.SetPositionAllocator (nodesPositionAlloc);
-    mobility.Install (satellites);
-
-
-  Config::Connect ("/NodeList/0/$ns3::MobilityModel/CourseChange",
+  Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
                    MakeCallback (&CourseChange));
 
   std::streambuf *coutbuf = std::cout.rdbuf();
@@ -80,8 +68,7 @@ int main(int argc, char *argv[])
       std::cout.rdbuf(out.rdbuf());
     }
 
-  // std::cout << "Time,Satellite,x,y,z,Speed" << std::endl;
-  std::cout << satellites.Get(0)->GetObject<MobilityModel>()->GetPosition().z << std::endl;
+  std::cout << "Time,Satellite,x,y,z,Speed" << std::endl;
 
   Simulator::Stop (Time (duration));
   Simulator::Run ();

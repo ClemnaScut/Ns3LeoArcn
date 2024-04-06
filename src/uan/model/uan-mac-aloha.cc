@@ -131,7 +131,7 @@ UanMacAloha::RxPacketGood (Ptr<Packet> pkt, double sinr, UanTxMode txMode)
 void
 UanMacAloha::RxPacketError (Ptr<Packet> pkt, double sinr)
 {
-  NS_LOG_DEBUG ("" << Simulator::Now () << " MAC " << Mac8Address::ConvertFrom (GetAddress ()) << " Received packet in error with sinr " << sinr);
+  NS_LOG_DEBUG ("" << Simulator::Now ().GetSeconds() << " MAC " << Mac8Address::ConvertFrom (GetAddress ()) << " Received packet in error with sinr " << sinr);
 }
 
 int64_t

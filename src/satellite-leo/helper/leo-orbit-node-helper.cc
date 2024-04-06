@@ -65,6 +65,8 @@ LeoOrbitNodeHelper::Install (const LeoOrbit &orbit)
   NodeContainer c;
   c.Create (orbit.sats*orbit.planes);
   mobility.Install (c);
+  //会调用leo-circular-orbit-position-allocator.cc中的GetNext函数来给c容器的节点计算初始位置，
+  //然后在GetNext函数中调用LeoCircularOrbitMobilityModel的DoSetPosition来进行设置初始位置
 
   return c;
 }

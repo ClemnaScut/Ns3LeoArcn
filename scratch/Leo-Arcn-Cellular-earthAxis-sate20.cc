@@ -18,6 +18,7 @@
 #include "ns3/vbf-module.h"
 #include "ns3/node.h"
 #include "ns3/leo-channel-helper.h"
+#include "ns3/leo-module.h"
 
 #include "ns3/stats-module.h"
 #include "ns3/applications-module.h"
@@ -58,8 +59,86 @@
 #include <random>
 
 using namespace ns3;
+NS_LOG_COMPONENT_DEFINE("Leo-Arcn-Earth-Sate");
 
-NS_LOG_COMPONENT_DEFINE("Leo-Arcn");
+
+struct LonAndLat
+{
+    double lon; //经度
+    double lat; //维度
+};
+
+
+//通过某一点的经纬度lon,lat计算另一点的经纬度,x为向右多少个间隔,y为向下多少个间隔，distance为间隔距离
+LonAndLat CalculateLL(double lon, double lat, int x, int y, double dstx, double dsty)
+{
+    double arc = 6371.393 * 1000;
+    // cout << sin(a*2*M_PI/ 360) << " " << cos(lat/180) << endl;
+    // cout << dst * sin(a*2*M_PI/ 360) / (arc * cos(lat/180) * 2 * M_PI/ 360) << endl;
+
+    lon += dstx * x / (arc * cos(lat/180) * 2 * M_PI/ 360);
+    lat += dsty * y / (arc * 2 * M_PI / 360);
+    LonAndLat newll;
+    newll.lat = lat;
+    newll.lon = lon;
+
+    return newll;
+}
+
+
+//根据三维坐标计算该点的经纬度
+LonAndLat position2LL(Vector position)
+{
+    double LatSource = atan(position.z/(sqrt(position.x*position.x + position.y*position.y)))/(M_PI / 180);
+    double LonSource = atan(position.y / position.x)/(M_PI / 180);
+    if(position.x<0 && position.y>0) LonSource+=180;
+    if(position.x<0 && position.y<0) LonSource-=180;
+    // NS_LOG_DEBUG("LatSource: " << LatSource << " LonSource " << LonSource );
+    LonAndLat retll;
+    retll.lat = LatSource;
+    retll.lon = LonSource;
+
+    return retll;
+}
+
+
+//计算卫星的三维坐标
+Vector
+getLeoPosition (LonAndLat leoll, double height)
+{
+  double lat = leoll.lat * (M_PI / 180);
+  double lon = leoll.lon * (M_PI / 180);
+  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
+  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
+  // 			   LEO_GND_RAD_EARTH * cos (lat));
+
+  //修改版
+  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
+  Vector pos = Vector((LEO_GND_RAD_EARTH+height*1000) * cos (lat) * cos (lon),
+  			   (LEO_GND_RAD_EARTH+height*1000) * cos (lat) * sin (lon),
+  			   (LEO_GND_RAD_EARTH+height*1000) * sin (lat));
+
+  return pos;
+}
+
+//卫星的运行轨迹
+void CourseChange (std::string context, Ptr<const MobilityModel> position)
+{
+    if(int(Simulator::Now().GetSeconds())%1000==0)
+    {
+    Vector pos = position->GetPosition ();
+    Ptr<Node> node = position->GetObject<Node> ();
+    // std::cout << Simulator::Now () << " " << node->GetId () << " " << pos.x << " " << pos.y << " " << pos.z << " " << position->GetVelocity ().GetLength() << std::endl;
+    double LatSource = atan(pos.z/(sqrt(pos.x*pos.x + pos.y*pos.y)))/(M_PI / 90);
+    double LonSource = atan(pos.y / pos.x)/(M_PI / 180);
+    if(pos.x<0 && pos.y>0) LonSource+=180;
+    if(pos.x<0 && pos.y<0) LonSource-=180;
+    NS_LOG_UNCOND("time:" << Simulator::Now().GetSeconds() << " SatelliteId "<< node->GetId() << " LatSource: " << LatSource << " LonSource " << LonSource );
+    };
+
+}
+
+
 
 class ARCN
 {
@@ -89,6 +168,7 @@ class ARCN
 	NetDeviceContainer gateway_buoyuan_device;
     // NetDeviceContainer gateway_satellite_device;
     NetDeviceContainer satellite_device;
+    NetDeviceContainer satellite_isl_device; 
 
 	Ipv4InterfaceContainer uan_inter;
 	Ipv4InterfaceContainer gateway_buoywireless_inter;
@@ -198,13 +278,13 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(3000),
+    totalTime(5000),
     pcap (true),
     printRoutes (true),
 
     numUan(103),
     numgtbuoy(6),
-    numLeo(1),
+    numLeo(20),
     m_uanMacType("ns3::UanMacAloha"),
     m_wifiPhyMode("OfdmRate6Mbps"),
     m_depth(-500),
@@ -262,14 +342,20 @@ ARCN::Configure(int argc, char* argv[])
 
     // LogComponentEnable("vbfRoutingProtocol", LOG_LEVEL_ALL);
     // LogComponentEnable("Ipv4L3Protocol",LOG_LEVEL_ALL);
-    LogComponentEnable("Leo-Arcn", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("Leo-Arcn-Earth-Sate", LOG_LEVEL_DEBUG);
+    // // LogComponentEnable("LeoGndNodeHelper",LOG_LEVEL_INFO);
+    // LogComponentEnable("LeoPropagationLossModel",LOG_LEVEL_INFO);
+    // LogComponentEnable("MockNetDevice", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("Ipv4L3Protocol", LOG_LEVEL_INFO);
+    // LogComponentEnable("UanMacAloha", LOG_LEVEL_ALL);
+
+
 	// LogComponentEnable("UanPhyGen", LOG_LEVEL_ALL);
     // LogComponentEnable("UanMacSFAMA", LOG_LEVEL_ALL);
 	LogComponentEnableAll(LOG_PREFIX_TIME);
 	LogComponentEnableAll(LOG_PREFIX_NODE);
 	LogComponentEnableAll(LOG_PREFIX_FUNC);
 	LogComponentEnableAll(LOG_PREFIX_LEVEL);
-    //LogComponentEnable("UanMacAloha", LOG_LEVEL_ALL);
 	SeedManager::SetSeed(12345);
 	CommandLine cmd;
 
@@ -309,9 +395,85 @@ void
 ARCN::CreateNodes()
 {
     NS_LOG_DEBUG("-----------Initializing Nodes-----------");
-	uanNode.Create(numUan);
-	gatewaybuoyNode.Create(numgtbuoy);
-    leoNode.Create(numLeo);
+	// uanNode.Create(numUan);
+    double lat_o = 10;
+    double lon_o = 0;
+    double lat_1 = CalculateLL(lon_o,lat_o,1,1,-10000,-10000*sqrt(3)).lat;
+    double lon_1 = CalculateLL(lon_o,lat_o,1,1,-10000,-10000*sqrt(3)).lon;
+
+
+    LeoGndNodeHelper ground;
+    LonAndLat groundll;
+    NS_LOG_INFO("The Gnd Node");
+    for(int i=0; i<5; i++)
+    {
+        for(int j=0; j<11; j++)
+        {
+            groundll = CalculateLL(lon_o,lat_o,j,i,20000,-20000*sqrt(3));
+            LeoLatLong station(groundll.lat, groundll.lon);
+            ground.Install(uanNode,station,0);
+
+        }
+
+        for(int j=0; j<12 && i<4; j++)
+        {
+            groundll = CalculateLL(lon_1,lat_1,j,i,20000,-20000*sqrt(3));
+            LeoLatLong station(groundll.lat, groundll.lon);
+            ground.Install(uanNode,station,0);
+        }    
+    }
+
+
+
+	// gatewaybuoyNode.Create(numgtbuoy);
+    NS_LOG_INFO("The Buoy Node");
+    double lat_buoy = CalculateLL(lon_o,lat_o,2,1,20000,-20000*sqrt(3)).lat;
+    double lon_buoy = CalculateLL(lon_o,lat_o,2,1,20000,-20000*sqrt(3)).lon;
+    LeoGndNodeHelper buoy;
+    LonAndLat buoyll;
+    for(int i=0; i<2; i++)
+    {
+        for(int j=0; j<3; j++)
+        {
+            buoyll = CalculateLL(lon_buoy,lat_buoy,3*j,2*i,20000,-20000*sqrt(3));
+            LeoLatLong buoystation(buoyll.lat, buoyll.lon);
+            buoy.Install(gatewaybuoyNode,buoystation,1);
+
+        } 
+    }
+
+    // NS_LOG_DEBUG("   " << (uanNode.Get(25)->GetObject<MobilityModel>()->GetPosition() - gatewaybuoyNode.Get(0)->GetObject<MobilityModel>()->GetPosition()).GetLength());
+
+
+    NS_LOG_INFO("The Leo Node");
+    // leoNode.Create(1);
+	// MobilityHelper mobility;
+	// Ptr<ListPositionAllocator> nodesPositionAlloc = CreateObject<ListPositionAllocator> ();
+    // LonAndLat leoll = {180,89.37697};
+    // LonAndLat leoll = {0.900656,9.37697};
+    // nodesPositionAlloc->Add (getLeoPosition(leoll,1200));
+
+    // mobility.SetPositionAllocator (nodesPositionAlloc);
+    // mobility.Install (leoNode);
+
+    LeoOrbitNodeHelper orbit;
+    leoNode = orbit.Install ( LeoOrbit (1200, 20, 1, 1));
+    Vector Psource = leoNode.Get(0)->GetObject<MobilityModel>()->GetPosition();
+    double LatSource = atan(Psource.z/(sqrt(Psource.x*Psource.x + Psource.y*Psource.y)))/(M_PI / 90);
+    double LonSource = atan(Psource.y / Psource.x)/(M_PI / 180);
+    if(Psource.x<0 && Psource.y>0) LonSource+=180;
+    if(Psource.x<0 && Psource.y<0) LonSource-=180;
+    NS_LOG_UNCOND("Satellite Node Id: " << 0);
+    NS_LOG_UNCOND("LatSource: " << LatSource << " LonSource " << LonSource );
+    NS_LOG_UNCOND("Position: " << Psource);
+
+    ostringstream osscb1;
+    osscb1 << "/NodeList/" << leoNode.Get(0)->GetId() <<"/$ns3::MobilityModel/CourseChange";
+    Config::Connect (osscb1.str(), MakeCallback (&CourseChange));
+    // osscb2 << "/NodeList/" << leoNode.Get(1)->GetId() <<"/$ns3::MobilityModel/CourseChange";
+    // Config::Connect (osscb2.str(), MakeCallback (&CourseChange));
+    // osscb3 << "/NodeList/" << leoNode.Get(2)->GetId() <<"/$ns3::MobilityModel/CourseChange";
+    // Config::Connect (osscb3.str(), MakeCallback (&CourseChange));
 
 	// Name uan nodes
 	for (uint32_t i = 0; i < numUan; ++i)
@@ -330,7 +492,7 @@ ARCN::CreateNodes()
 	}
 
     // Name satellite nodes
-	for (uint32_t i = 0; i < numLeo; ++i)
+	for (uint32_t i = 0; i < leoNode.GetN(); ++i)
 	{
 		std::ostringstream os;
 		os << "LeoNode-" << i;
@@ -357,45 +519,64 @@ ARCN::SetPosition()
 	MobilityHelper mobility;
 	Ptr<ListPositionAllocator> nodesPositionAlloc = CreateObject<ListPositionAllocator> ();
 
-    double x = m_interval/2;
-    double y = m_interval*sqrt(3)/2;
+    // double x = m_interval/2;
+    // double y = m_interval*sqrt(3)/2;
 
-    //Set Uan node's position
-    for(int n=0; n<9; n++)
-    {
-        if(n%2 == 0)
-        {
-            for(int m=0; m<11; m++)
-            {
-                nodesPositionAlloc->Add (Vector((1+2*m)*x, n*y, -1000));
-            }
-        }
-        else
-        {
-            for(int m=0; m<12; m++)
-            {
-                nodesPositionAlloc->Add (Vector((2*m)*x, n*y, -1000));
-            }
-        }
-    }
+    // //Set Uan node's position
+    // for(int n=0; n<9; n++)
+    // {
+    //     if(n%2 == 0)
+    //     {
+    //         for(int m=0; m<11; m++)
+    //         {
+    //             nodesPositionAlloc->Add (Vector((1+2*m)*x, n*y, -1000));
+    //         }
+    //     }
+    //     else
+    //     {
+    //         for(int m=0; m<12; m++)
+    //         {
+    //             nodesPositionAlloc->Add (Vector((2*m)*x, n*y, -1000));
+    //         }
+    //     }
+    // }
 
 
-    //Set Buoy node's position
-    nodesPositionAlloc->Add (Vector(5*x, 2*y, 0));
-    nodesPositionAlloc->Add (Vector(11*x, 2*y, 0));
-    nodesPositionAlloc->Add (Vector(17*x, 2*y, 0));
-    nodesPositionAlloc->Add (Vector(5*x, 6*y, 0));
-    nodesPositionAlloc->Add (Vector(11*x, 6*y, 0));
-    nodesPositionAlloc->Add (Vector(17*x, 6*y, 0));
+    // //Set Buoy node's position
+    // nodesPositionAlloc->Add (Vector(5*x, 2*y, 0));
+    // nodesPositionAlloc->Add (Vector(11*x, 2*y, 0));
+    // nodesPositionAlloc->Add (Vector(17*x, 2*y, 0));
+    // nodesPositionAlloc->Add (Vector(5*x, 6*y, 0));
+    // nodesPositionAlloc->Add (Vector(11*x, 6*y, 0));
+    // nodesPositionAlloc->Add (Vector(17*x, 6*y, 0));
+
 
     //Set Leo Node's position
-    nodesPositionAlloc->Add (Vector(11*x, 4*y, 2000000));
+    // LonAndLat leoll = {0.900656,9.37697};
+    // nodesPositionAlloc->Add (getLeoPosition(leoll,1200));
 
-    mobility.SetPositionAllocator (nodesPositionAlloc);
-    mobility.Install (uanNode);
-    mobility.Install (gatewaybuoyNode);
-    mobility.Install (leoNode);
-   
+    // mobility.SetPositionAllocator (nodesPositionAlloc);
+    // // mobility.Install (uanNode);
+    // // mobility.Install (gatewaybuoyNode);
+    // mobility.Install (leoNode);
+
+
+
+    for(uint32_t i=0; i<uanNode.GetN(); i++)
+    {
+        LonAndLat nodell = position2LL(uanNode.Get(i)->GetObject<MobilityModel>()->GetPosition());
+        NS_LOG_DEBUG( i << " " << uanNode.Get(i)->GetObject<MobilityModel>()->GetPosition() << " " << nodell.lat << " " << nodell.lon);
+    }
+    for(uint32_t i=0; i<gatewaybuoyNode.GetN(); i++)
+    {
+        LonAndLat nodell = position2LL(gatewaybuoyNode.Get(i)->GetObject<MobilityModel>()->GetPosition());
+        NS_LOG_DEBUG( i << " " << gatewaybuoyNode.Get(i)->GetObject<MobilityModel>()->GetPosition() << " "  << nodell.lat << " " << nodell.lon);
+    }
+    for(uint32_t i=0; i<leoNode.GetN(); i++)
+    {
+        LonAndLat nodell = position2LL(leoNode.Get(i)->GetObject<MobilityModel>()->GetPosition());
+        NS_LOG_DEBUG( i << " "<< leoNode.Get(i)->GetObject<MobilityModel>()->GetPosition() << " "  << nodell.lat << " " << nodell.lon);
+    }
 }
 
 
@@ -465,6 +646,9 @@ ARCN::CreateDevices(UanHelper uanHelper, YansWifiPhyHelper wifiPhy)
     NS_LOG_DEBUG("-----------Initializing Saltellite-----------");
     LeoChannelHelper utCh;
     satellite_device = utCh.Install (leoNode, gatewaybuoyNode);
+
+    IslHelper islCh;
+    satellite_isl_device = islCh.Install (leoNode);
 
     NS_LOG_DEBUG("-----------Initializing Energy-----------");
     BasicEnergySourceHelper energySourceHelper;
@@ -547,6 +731,10 @@ ARCN::InstallInternetStack()
 	NS_LOG_DEBUG ("Assign Satellite IP Addresses.");
 	satellite_inter = address.Assign(satellite_device);
     //satellite:10.1.3.1 //buoy:10.1.3.2-10.1.3.7
+
+
+    address.SetBase ("10.1.4.0", "255.255.255.0");
+    address.Assign (satellite_isl_device);
 
 	//change arp cache wait time.
 	NodeContainer::Iterator m_uanNode = uanNode.Begin();
@@ -763,16 +951,23 @@ ARCN::NodeSendPacket()
     double sendtime = Simulator::Now().GetSeconds();
     SrcMap_IdSendTime[packet->GetUid()] = sendtime; 
 
-    Ptr<Node> srcsend = UanSrcNode.Get(m_uniformRandomVariable->GetInteger (0, 15));
+    // Ptr<Node> srcsend = UanSrcNode.Get(m_uniformRandomVariable->GetInteger (0, 15));
+    // Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
+    // Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetInteger (0, 102),0);
+    // SendTo(srcsocket, packet, destAddr);
+
+    Ptr<Node> srcsend = uanNode.Get(25);
     Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetInteger (0, 102),0);
-    SendTo(srcsocket, packet, destAddr);
+    Ipv4Address destAddr = uan_inter.GetAddress(77,0);
+    SendTo(srcsocket, packet, destAddr); 
+
     NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
                  " to " << destAddr);
 
 //	erv = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(1/m_lambda));
 //	Simulator::Schedule (Seconds(erv->GetValue()), &AecnExample::NodeSendPacket, this);
-    Time nextSend = Seconds(m_exponentialRandomVariable->GetValue());
+    // Time nextSend = Seconds(m_exponentialRandomVariable->GetValue());
+    Time nextSend = Seconds(50);
     Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
     NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
 

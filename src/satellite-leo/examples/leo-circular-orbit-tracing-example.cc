@@ -30,7 +30,7 @@ void CourseChange (std::string context, Ptr<const MobilityModel> position)
 {
   Vector pos = position->GetPosition ();
   Ptr<const Node> node = position->GetObject<Node> ();
-  std::cout << Simulator::Now () << " :" << node->GetId () << " :" << pos.x << " :" << pos.y << " :" << pos.z << " :" << position->GetVelocity ().GetLength() << std::endl;
+  std::cout << Simulator::Now () << ":" << node->GetId () << ":" << pos.x << ":" << pos.y << ":" << pos.z << ":" << position->GetVelocity ().GetLength() << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
       				  LeoOrbit (1180, 30, 12, 10) });
     }
 
-  Config::Connect ("/NodeList/2/$ns3::MobilityModel/CourseChange",
+  Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
                    MakeCallback (&CourseChange));
 
   std::streambuf *coutbuf = std::cout.rdbuf();

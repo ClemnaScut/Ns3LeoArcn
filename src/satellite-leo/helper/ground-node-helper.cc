@@ -98,11 +98,38 @@ LeoGndNodeHelper::Install (uint32_t latNodes, uint32_t lonNodes)
 Vector3D
 LeoGndNodeHelper::GetEarthPosition (const LeoLatLong &loc)
 {
-  double lat = loc.latitude * (M_PI / 90);
+  double lat = loc.latitude * (M_PI / 180);
   double lon = loc.longitude * (M_PI / 180);
-  Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
-  			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
-  			   LEO_GND_RAD_EARTH * cos (lat));
+  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
+  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
+  // 			   LEO_GND_RAD_EARTH * cos (lat));
+
+  //修改版
+  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
+  Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * cos (lat) * cos (lon),
+  			   LEO_GND_RAD_EARTH * cos (lat) * sin (lon),
+  			   LEO_GND_RAD_EARTH * sin (lat));
+
+  return pos;
+}
+
+Vector3D
+LeoGndNodeHelper::GetBuoyPosition (const LeoLatLong &loc)
+{
+
+  double lat = loc.latitude * (M_PI / 180);
+  double lon = loc.longitude * (M_PI / 180);
+  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
+  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
+  // 			   LEO_GND_RAD_EARTH * cos (lat));
+
+  //修改版
+  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
+  double buoyHighth = 500;
+  Vector3D pos = Vector3D ((LEO_GND_RAD_EARTH+buoyHighth) * cos (lat) * cos (lon),
+  			   (LEO_GND_RAD_EARTH+buoyHighth)* cos (lat) * sin (lon),
+  			   (LEO_GND_RAD_EARTH+buoyHighth) * sin (lat));
+
   return pos;
 }
 
@@ -129,5 +156,35 @@ LeoGndNodeHelper::Install (const LeoLatLong &location1,
 
   return nodes;
 }
+
+//20240228新增
+NodeContainer
+LeoGndNodeHelper::Install (NodeContainer& GNDnodes, const LeoLatLong &location, uint32_t flag)
+{
+  NS_LOG_FUNCTION (this << location);
+
+  const LeoLatLong loc = location;
+  Vector pos;
+  if(flag == 0)
+  {
+    pos = GetEarthPosition(loc);
+  }
+  else if(flag == 1)
+  {
+    pos = GetBuoyPosition(loc);
+  }
+
+  Ptr<ConstantPositionMobilityModel> mob = CreateObject<ConstantPositionMobilityModel> ();
+  mob->SetPosition (pos);
+  Ptr<Node> node = m_gndNodeFactory.Create<Node> ();
+  node->AggregateObject (mob);
+  GNDnodes.Add (node);
+  NS_LOG_INFO ("Added ground node at " << pos);
+  NS_LOG_INFO ("there are " << GNDnodes.GetN () << " ground nodes now.");
+
+  return GNDnodes;
+}
+
+
 
 }; // namespace ns3

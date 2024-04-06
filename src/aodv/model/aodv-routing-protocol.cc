@@ -2116,9 +2116,12 @@ RoutingProtocol::DoInitialize (void)
   if (m_enableHello)
     {
       m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
-      startTime = m_uniformRandomVariable->GetInteger (0, 100);
+      // startTime = m_uniformRandomVariable->GetInteger (0, 100);
+      // m_htimer.Schedule (MilliSeconds (startTime));
+      startTime = m_uniformRandomVariable->GetInteger (0, 20);
+      m_htimer.Schedule (Seconds(startTime));  //适应水声均匀结构的延迟
       NS_LOG_DEBUG ("Starting at time " << startTime << "ms");
-      m_htimer.Schedule (MilliSeconds (startTime));
+
     }
   Ipv4RoutingProtocol::DoInitialize ();
 }

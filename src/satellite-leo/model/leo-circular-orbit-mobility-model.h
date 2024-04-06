@@ -34,6 +34,8 @@
 
 #define LEO_EARTH_RAD_KM 6371.0090
 #define LEO_EARTH_GM_KM_E10 39.8600436
+#define LEO_EARTH 398600
+
 
 namespace ns3 {
 
@@ -118,6 +120,20 @@ private:
    */
   Time m_precision;
 
+
+//add by ljy 
+  /**
+   * flag when calculate position
+  */
+  mutable bool flagLeo;
+
+  /**
+   * the latitude and longitude of leo
+  */
+  mutable double m_lat;
+  mutable double m_lon;
+//over 2024/04/04
+
   /**
    * \return the current position.
    */
@@ -166,13 +182,21 @@ private:
    *
    * \return latitude
    */
-  double CalcLatitude () const;
+  // double CalcLatitude () const;
+  double CalcLongitude () const;
 
   /**
    * \brief Update the internal position of the mobility model
    * \return position that will be returned upon next call to DoGetPosition
    */
   Vector Update ();
+
+//add by ljy
+  Vector3D nextPrecisionPosition()  const;
+  Vector3D GetPositionByLL(double lat, double lon, double height) const;
+  double CalcLat(Vector pos) const;
+  double CalcLon(Vector pos) const;
+
 };
 
 }

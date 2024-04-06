@@ -93,35 +93,35 @@ public:
   //设置Header信息
   void SetMessType(uint8_t messageType)
   {
-    m_messType = messageType;
+    m_messType = messageType; //好像没用
   }
   void SetPkNum(uint16_t pkNum)
   {
-    m_pkNum = pkNum;
+    m_pkNum = pkNum; //用于标示唯一一个vbf packet
   }
   void SetHopCount(uint8_t hopCount)
   {
-    m_hopCount = hopCount;
+    m_hopCount = hopCount; //记录此vbf packet经过了多少跳
   }
   void SetTargetAddr(Ipv4Address targetAddr)
   {
-    m_targetAddr = targetAddr;
+    m_targetAddr = targetAddr; //最终dest ip
   }
   void SetSenderAddr(Ipv4Address senderAddr)
   {
-    m_sourceAddr = senderAddr;
+    m_sourceAddr = senderAddr; //最初始source ip
   }
   void SetForwardAddr(Ipv4Address forwardAddr)
   {
-    m_forwardAddr = forwardAddr;
+    m_forwardAddr = forwardAddr; //上一跳ip 一般节点转发时会把这个值设置为自己ip
   }
   void SetTimeGenerate(Time timeGenerate)
   {
-    m_timegenerate = uint32_t(timeGenerate.GetSeconds());
+    m_timegenerate = uint32_t(timeGenerate.GetSeconds()); //产生这个packet时的时间点
   }
   void SetTimeForward(Time timeForward)
   {
-    m_timeforward = uint32_t(timeForward.GetSeconds());
+    m_timeforward = uint32_t(timeForward.GetSeconds()); //
   }
 
   //获取Header信息

@@ -232,7 +232,7 @@ RoutingProtocol::GetTypeId (void)
       MakeIntegerAccessor(&RoutingProtocol::m_enableRouting),
       MakeIntegerChecker<int>())
     .AddAttribute ("Width", "Width of VBF. Default is 30000.",
-      DoubleValue(30000),
+      DoubleValue(40000),
       MakeDoubleAccessor(&RoutingProtocol::m_width),
       MakeDoubleChecker<double>())
     .AddAttribute ("TransRange", "TransRange of the UnderWaterNode. Default is 25000.",
@@ -1025,9 +1025,6 @@ RoutingProtocol::CalculateDelay(Ptr<Packet> pkt, double range, double speed)
   if(length_f2m==0 || length_f2t==0){cos_theta = 0;}
   else{cos_theta = f2mf2t/(length_f2m*length_f2t);}
 
-  //根据地址判断网卡类型，以确定m_TransRange?? 这里怎么处理
-
-
   //利用cos_theta和projection去计算factor
   m_TransRange = range;
   m_SoundSpeed = speed;
@@ -1169,7 +1166,7 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
                 }
             //需要设定一个随机延时，避免碰撞
               uint32_t sendTime= m_uniformRandomVariable->GetInteger (0, 5);
-              NS_LOG_DEBUG("Set send delay: " << sendTime);
+              NS_LOG_DEBUG("subnet number:" << destination << ". Set send delay: " << sendTime);
               Simulator::Schedule (Seconds(sendTime), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
 
             }
@@ -1209,7 +1206,7 @@ RoutingProtocol::Timeout(Ptr<Packet> pkt)
           destination = iface.GetBroadcast ();
         }
         uint32_t sendTime= m_uniformRandomVariable->GetInteger (0, 5);
-        NS_LOG_DEBUG("Set send delay: " << sendTime);
+        NS_LOG_DEBUG("subnet number:" << destination << ". Set send delay: " << sendTime);
         Simulator::Schedule (Seconds(sendTime), &RoutingProtocol::SendTo, this, socket, newPacket, destination);
       }
     }

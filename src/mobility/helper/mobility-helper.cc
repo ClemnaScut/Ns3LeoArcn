@@ -155,7 +155,7 @@ MobilityHelper::Install (Ptr<Node> node) const
           NS_LOG_DEBUG ("node="<<object<<", mob="<<hierarchical);
         }
     }
-  Vector position = m_position->GetNext ();
+  Vector position = m_position->GetNext (); //position=(0,0,0) (0,120*pi/180,0) (0,240*pi/180,0)
   model->SetPosition (position);
 }
 

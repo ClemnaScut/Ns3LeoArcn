@@ -173,10 +173,11 @@ int main (int argc, char *argv[])
       utCh.EnablePcapAll ("tcp-bulk-send", false);
     }
 
-  // std::cerr << "LOCAL =" << users.Get (0)->GetId () << std::endl;
-  // std::cerr << "REMOTE=" << users.Get (1)->GetId () << ",addr=" << Ipv4Address::ConvertFrom (remote) << std::endl;
+  std::cerr << "LOCAL =" << users.Get (0)->GetId () << std::endl;
+  std::cerr << "REMOTE=" << users.Get (1)->GetId () << ",addr=" << Ipv4Address::ConvertFrom (remote) << std::endl;
 
   NS_LOG_INFO ("Run Simulation.");
+  Simulator::Stop (Seconds (duration));
   Simulator::Run ();
   Simulator::Destroy ();
   NS_LOG_INFO ("Done.");

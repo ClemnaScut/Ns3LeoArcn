@@ -79,22 +79,23 @@ LeoPropagationLossModel::SetElevationAngle (double angle)
 double
 LeoPropagationLossModel::GetCutoffDistance (const Ptr<MobilityModel> sat) const
 {
-  double angle = m_elevationAngle;
+  double angle = m_elevationAngle; //ANGLE = 40*PI/180 40°
   double hs = sat->GetPosition ().GetLength ();
 
-  double a = 1 + tan (angle) * tan (angle);
-  double b = 2.0 * tan (angle) * hs;
+  double a = 1 + tan (angle) * tan (angle); //a>0
+  double b = 2.0 * tan (angle) * hs;  //b>0
   double c = hs*hs - LEO_PROP_EARTH_RAD*LEO_PROP_EARTH_RAD;
 
-  double disc = b*b + 4*a*c;
+  // double disc = b*b + 4*a*c;
+  double disc = b*b - 4*a*c;
+
 
   NS_LOG_DEBUG ("angle="<<angle<<" hs="<<hs<<" a="<<a<<" b="<<b<<" c="<<c<<" disc="<<disc);
 
   if (disc < 0)
     {
-      // point not on earth surface
-      return 2500000; //先不考虑实际传播范围问题
-      // return - 1.0;
+      // can not connect
+      return - 1.0;
     }
 
   double t1 = (-b - sqrt (disc)) / (2.0 * a);
@@ -104,10 +105,7 @@ LeoPropagationLossModel::GetCutoffDistance (const Ptr<MobilityModel> sat) const
   double num2 = Vector2D (t2, - tan (angle) * t2).GetLength ();
 
 
-  // return fmin (num1, num2);
-  (void)num1;
-  (void)num2;
-  return 2500000; //先不考虑实际传播范围问题
+  return fmin (num1, num2);
 }
 
 double
@@ -121,21 +119,22 @@ LeoPropagationLossModel::DoCalcRxPower (double txPowerDbm,
                                         Ptr<MobilityModel> a,
                                         Ptr<MobilityModel> b) const
 {
+  NS_LOG_DEBUG(this << "channel calculate " << a->GetPosition () << " " << b->GetPosition ());
   Ptr<MobilityModel> sat = a->GetPosition ().GetLength () > b->GetPosition ().GetLength () ? a : b;
   // std::cout << sat->GetPosition().GetLength() << std::endl;
   double distance = a->GetDistanceFrom (b); //distance
   double cutOff = GetCutoffDistance (sat); //range
-  // if (distance > cutOff)
-  //   {
-  //     NS_LOG_DEBUG ("LEO DROP distance: a=" << a->GetPosition () << " b=" << b->GetPosition ()<<" dist=" << distance<<" cutoff="<<cutOff);
+  if (distance > cutOff)
+    {
+      NS_LOG_DEBUG ("LEO DROP distance: a=" << a->GetPosition () << " b=" << b->GetPosition ()<<" dist=" << distance<<" cutoff="<<cutOff);
 
-  //     return -1000.0;
-  //   }
-  if (distance > cutOff || a->GetPosition().z == b->GetPosition().z) //modified by ljy
-  {
-      NS_LOG_DEBUG("水面节点之间的通信不可达");
       return -1000.0;
-  }
+    }
+  // if (distance > cutOff || a->GetPosition().z == b->GetPosition().z) //modified by ljy
+  // {
+  //     NS_LOG_DEBUG("水面节点之间的通信不可达");
+  //     return -1000.0;
+  // }
 
   // txPowerDbm includes tx antenna gain and losses
   // receiver loss and gain added at net device

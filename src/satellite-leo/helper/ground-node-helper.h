@@ -73,6 +73,13 @@ public:
   NodeContainer Install (const LeoLatLong &location1,
   			 const LeoLatLong &location2);
 
+  //added in 20240228
+  NodeContainer Install (NodeContainer& GNDnodes, const LeoLatLong &location, uint32_t flag);
+
+
+  NodeContainer
+  Install (const LeoLatLong* location, uint32_t len);
+
   /**
    * \brief Set an attribute for each node
    * \param name name of the attribute
@@ -86,6 +93,7 @@ private:
 
   /// Convert the latitude and longitude to a position on a sphere
   static Vector3D GetEarthPosition (const LeoLatLong &loc);
+  static Vector3D GetBuoyPosition (const LeoLatLong &loc);
 };
 
 }; // namespace ns3
