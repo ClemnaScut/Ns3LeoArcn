@@ -16,6 +16,8 @@
 #include "ns3/node-container.h"
 #include "ns3/vbf-helper.h"
 #include "ns3/vbf-module.h"
+#include "ns3/vbf-hybird-helper.h"
+#include "ns3/vbf-hybird-module.h"
 #include "ns3/node.h"
 #include "ns3/leo-channel-helper.h"
 #include "ns3/leo-module.h"
@@ -259,7 +261,7 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(5000),
+    totalTime(5),
     pcap (true),
     printRoutes (true),
 
@@ -321,7 +323,7 @@ ARCN::Configure(int argc, char* argv[])
 
     //LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
 
-    // LogComponentEnable("vbfRoutingProtocol", LOG_LEVEL_ALL);
+    LogComponentEnable("vbfHybirdRoutingProtocol", LOG_LEVEL_ALL);
     // LogComponentEnable("Ipv4L3Protocol",LOG_LEVEL_ALL);
     LogComponentEnable("Leo-Arcn", LOG_LEVEL_DEBUG);
     // LogComponentEnable("LeoGndNodeHelper",LOG_LEVEL_INFO);
@@ -664,11 +666,12 @@ ARCN::InstallInternetStack()
 // 	aodv.Set("TtlStart", UintegerValue(20));
 
     vbfHelper vbf;
+    vbfHybirdHelper vbfh;
     AodvHelper aodv;
 
 
 	InternetStackHelper stack;
-	stack.SetRoutingHelper (vbf);
+	stack.SetRoutingHelper (vbfh);
 	stack.Install (uanNode);
 	stack.Install (gatewaybuoyNode);
 	stack.Install (leoNode);

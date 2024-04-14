@@ -27,7 +27,7 @@
  */
 
 
-#include "vbf-routing-protocol.h"
+#include "vbf-hybird-routing-protocol.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
 #include "ns3/random-variable-stream.h"
@@ -46,9 +46,87 @@
 #include <limits>
 
 namespace ns3 {
-NS_LOG_COMPONENT_DEFINE ("vbfRoutingProtocol");
+NS_LOG_COMPONENT_DEFINE ("vbfHybirdRoutingProtocol");
 
-namespace vbf {
+namespace vbf_hybird {
+
+#define MAX_UAN_NODE 102 //水下节点数
+uint32_t buoyId[] = {103,104,105,106,107,108};
+std::set<uint32_t> buoyIdSet(std::begin(buoyId), std::end(buoyId)) ; //储存buoy节点的NodeId
+uint32_t buoyNbhId[] = 
+{25,13,14,24,26,36,37,
+ 28,16,17,27,29,39,40,
+ 31,19,20,30,32,42,43,
+ 71,59,60,70,72,82,83,
+ 74,62,63,73,75,85,86,
+ 77,65,66,76,78,88,89
+};
+std::set<uint32_t> buoyNeighborIdSet(std::begin(buoyNbhId), std::end(buoyNbhId));
+ //储存buoy节点的邻居NodeId
+
+std::pair<uint32_t, uint32_t> pairs[] = {
+    {103, 25},{104, 28},{105, 31},{106, 71},{107, 74},{108, 77}};
+std::map<uint32_t, uint32_t > buoy2uan(pairs, pairs + sizeof(pairs) / sizeof(pairs[0]));
+//记录下距离浮标节点最近的那个水下节点，方便浮标节点建立邻居表
+
+std::map<uint32_t, NeighborInfoTable*>  RoutingProtocol::nodeId2Table;
+
+// ------------------------------------------Neighbor Table---------------------------------------------------
+NeighborInfoTable::NeighborInfoTable()
+{
+  NS_LOG_FUNCTION(this);
+  m_isInit = false;
+  m_length = 0;
+}
+NeighborInfoTable::~NeighborInfoTable()
+{
+  NS_LOG_FUNCTION(this);
+}
+
+bool
+NeighborInfoTable::isInit()
+{
+  NS_LOG_FUNCTION(this);
+  return m_isInit;
+}
+
+uint32_t
+NeighborInfoTable::findNeighborBuoy()
+{
+  NS_LOG_FUNCTION(this);
+	for (std::vector<NeighborInfo>::iterator iter = m_table.begin(); iter != m_table.end(); iter++)
+	{
+    if(iter->n_flagBuoy == 1)
+    {
+      return iter->n_nodeid;
+    }
+  }
+  return -1;
+}
+
+bool 
+NeighborInfoTable::findNodeInTable(uint32_t id)
+{
+	for (std::vector<NeighborInfo>::iterator iter = m_table.begin(); iter != m_table.end(); iter++)
+	{
+    if(id == iter->n_nodeid)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void
+NeighborInfoTable::PrintTable()
+{
+  NS_LOG_FUNCTION(this);
+	for (std::vector<NeighborInfo>::iterator iter = m_table.begin(); iter != m_table.end(); iter++)
+	{
+    NS_LOG_DEBUG(iter->n_nodeid << " " << iter->n_ip << " " << iter->n_position << " " << 
+                 iter->n_flagAdjoin << " " << iter->n_flagBuoy << ".");
+  }
+}
 
 //------------------------------------Hash Table--------------------------------------
 
@@ -219,9 +297,9 @@ RoutingProtocol::RoutingProtocol ():
 TypeId
 RoutingProtocol::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::vbf::RoutingProtocol")
+  static TypeId tid = TypeId ("ns3::vbfhybird::RoutingProtocol")
     .SetParent<Ipv4RoutingProtocol> ()
-    .SetGroupName ("vbf")
+    .SetGroupName ("vbf_hybird")
     .AddConstructor<RoutingProtocol> ()
     .AddAttribute ("HopByHopModel", "Hop by hop VBF setting. Default 0 is false.",
       IntegerValue(0),
@@ -703,6 +781,16 @@ RoutingProtocol::GetNodeWithIpv4Address(Ipv4Address addr)
   }
 
   return 0;
+}
+
+Ipv4Address 
+RoutingProtocol::GetUanIpv4WithNode(Ptr<Node> node)
+{
+  NS_LOG_FUNCTION(this << node->GetId());
+  Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
+  // 0-本地网卡  1-uan  2-wifi  3-satellite
+  Ipv4InterfaceAddress ipv4Addr = ipv4->GetAddress(1,0);
+  return ipv4Addr.GetLocal();
 }
 
 
@@ -1305,11 +1393,196 @@ void
 RoutingProtocol::DoInitialize (void)
 {
   NS_LOG_FUNCTION (this);
+  //这里进行初始化邻居信息
+  uint32_t myNodeId = this->m_ipv4->GetObject<Node>()->GetId();
+  auto it = buoyIdSet.find(myNodeId);
+  if (it != buoyIdSet.end() && !this->m_nbhTable.m_isInit) 
+  {
+    // 元素找到，是浮标节点
+      buoyTableInit(myNodeId);
+  }
+  else 
+  {
+    // 元素未找到，需要再判断是不是浮标的邻居节点
+    auto it = buoyNeighborIdSet.find(myNodeId);
+    if (it != buoyNeighborIdSet.end() && !this->m_nbhTable.m_isInit)
+    {
+      // 元素找到，是浮标节点的邻居
+      Simulator::Schedule(Seconds(1),&RoutingProtocol::buoynbhTableInit,this,myNodeId);
+    }
+    else if(myNodeId == 109) //是卫星
+    {
+    }
+    else
+    {
+      if(!this->m_nbhTable.m_isInit){
+      Simulator::Schedule(Seconds(2),&RoutingProtocol::uanTableInit,this,myNodeId);}
+    }
+  
+  }
   Ipv4RoutingProtocol::DoInitialize ();
 }
 
 
+uint32_t 
+RoutingProtocol::findBuoyNbhNode(uint32_t id)
+{
+  for (auto it = buoyIdSet.begin(); it != buoyIdSet.end(); ++it)
+  {
+    //查找哪个浮标节点是这个id节点的邻居
+    if(nodeId2Table[*it]->findNodeInTable(id))
+    {
+      return *it;
+    }
+  }
+  return 0;
+}
 
+
+bool 
+RoutingProtocol::buoyTableInit(uint32_t nodeId)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT(this->m_nbhTable.m_isInit == false);
+  uint32_t uanNear = buoy2uan[nodeId]; //找到离浮标节点最近的水下节点的id
+  AddNeighborToTable(uanNear,BUOY,0,0);
+  AddNeighborToTable(uanNear-12,BUOY,0,0);
+  AddNeighborToTable(uanNear-11,BUOY,0,0);
+  AddNeighborToTable(uanNear-1,BUOY,0,0);
+  AddNeighborToTable(uanNear+1,BUOY,0,0);
+  AddNeighborToTable(uanNear+11,BUOY,0,0);
+  AddNeighborToTable(uanNear+12,BUOY,0,0);
+
+  this->m_nbhTable.m_isInit = true;
+  nodeId2Table[nodeId] = &this->m_nbhTable;
+  NS_LOG_DEBUG ("The Buoy Node "  << this->m_ipv4->GetObject<Node>()->GetId() << " Neighbor table Init Over.");
+  this->m_nbhTable.PrintTable();
+  return true;
+}
+
+
+bool 
+RoutingProtocol::buoynbhTableInit(uint32_t nodeId)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT(this->m_nbhTable.m_isInit == false);
+  //找到作为该节点的对应的那个浮标节点邻居
+  uint32_t buoyNbhId = findBuoyNbhNode(nodeId);
+  NS_ASSERT(buoyNbhId != 0);
+  AddNeighborToTable(buoyNbhId,BUOYNBH,0,1);
+  AddNeighborToTable(nodeId-12,BUOYNBH,0,0);
+  AddNeighborToTable(nodeId-11,BUOYNBH,0,0);
+  AddNeighborToTable(nodeId-1,BUOYNBH,0,0);
+  AddNeighborToTable(nodeId+1,BUOYNBH,0,0);
+  AddNeighborToTable(nodeId+11,BUOYNBH,0,0);
+  AddNeighborToTable(nodeId+12,BUOYNBH,0,0);
+
+  this->m_nbhTable.m_isInit = true;
+  nodeId2Table[nodeId] = &this->m_nbhTable;
+  NS_LOG_DEBUG ("The BuoyNbh Node "  << this->m_ipv4->GetObject<Node>()->GetId() << " Neighbor table Init Over.");
+  this->m_nbhTable.PrintTable();
+  return true;
+}
+
+bool 
+RoutingProtocol::uanTableInit(uint32_t nodeId)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT(this->m_nbhTable.m_isInit == false);
+  if(nodeId % 23 == 0)
+  {
+    AddNeighborToTable(nodeId-12,UAN,0,0);
+    AddNeighborToTable(nodeId-11,UAN,0,0);
+    AddNeighborToTable(nodeId+1,UAN,0,0);
+    AddNeighborToTable(nodeId+11,UAN,0,0);
+    AddNeighborToTable(nodeId+12,UAN,0,0);
+  }
+  else if(nodeId % 23 == 11)
+  {
+    AddNeighborToTable(nodeId-11,UAN,0,0);
+    AddNeighborToTable(nodeId+1,UAN,0,0);
+    AddNeighborToTable(nodeId+12,UAN,0,0);
+  }
+  else if(nodeId % 23 == 10)
+  {
+    AddNeighborToTable(nodeId-11,UAN,0,0);
+    AddNeighborToTable(nodeId-12,UAN,0,0);
+    AddNeighborToTable(nodeId-1,UAN,0,0);
+    AddNeighborToTable(nodeId+11,UAN,0,0);
+    AddNeighborToTable(nodeId+12,UAN,0,0);
+  }
+  else if(nodeId % 23 == 22)
+  {
+    AddNeighborToTable(nodeId-12,UAN,0,0);
+    AddNeighborToTable(nodeId-1,UAN,0,0);
+    AddNeighborToTable(nodeId+11,UAN,0,0);
+  }
+  else
+  {
+    AddNeighborToTable(nodeId-11,UAN,0,0);
+    AddNeighborToTable(nodeId-12,UAN,0,0);
+    AddNeighborToTable(nodeId-1,UAN,0,0);
+    AddNeighborToTable(nodeId+1,UAN,0,0);
+    AddNeighborToTable(nodeId+11,UAN,0,0);
+    AddNeighborToTable(nodeId+12,UAN,0,0);
+  }
+
+  this->m_nbhTable.m_isInit = true;
+  nodeId2Table[nodeId] = &this->m_nbhTable;
+  NS_LOG_DEBUG ("The Uan Node "  << this->m_ipv4->GetObject<Node>()->GetId() << " Neighbor table Init Over.");
+  this->m_nbhTable.PrintTable();
+  return true;
+
+}
+
+
+void 
+RoutingProtocol::AddNeighborToTable(uint32_t id, NodeType type, uint32_t flagAddj, uint32_t flagBuoy)
+{
+  NS_LOG_FUNCTION (this);
+
+
+  if(type == BUOY) //主节点是浮标节点，此时让邻居flagAddj和flagBuoy都为0
+  {
+    Ptr<Node> node = NodeList::GetNode(id);
+    Ipv4Address ipv4Addr = GetUanIpv4WithNode(node);
+    Vector position = node->GetObject<MobilityModel>()->GetPosition();
+    NeighborInfo newNbhInfo{id,ipv4Addr,position,flagAddj,flagBuoy};
+    this->m_nbhTable.m_table.push_back(newNbhInfo);
+    this->m_nbhTable.m_length++;
+  }
+  else if(type == BUOYNBH)//主节点是浮标节点的邻居节点，此时让邻居flagAddj和flagBuoy都为0
+  {
+    Ptr<Node> node = NodeList::GetNode(id);
+    Ipv4Address ipv4Addr = GetUanIpv4WithNode(node);
+    Vector position = node->GetObject<MobilityModel>()->GetPosition();
+    NeighborInfo newNbhInfo{id,ipv4Addr,position,flagAddj,flagBuoy};
+    this->m_nbhTable.m_table.push_back(newNbhInfo);
+    this->m_nbhTable.m_length++;
+
+  }else if(type == UAN)
+  {
+    //如果节点id不对，说明此时的主节点位于网络边缘处，直接跳过邻居添加
+    if(id<0 || id>MAX_UAN_NODE){return;}
+    else
+    {
+      //需要考虑其他邻居的表还没建立的情况?
+      Ptr<Node> node = NodeList::GetNode(id);
+      Ipv4Address ipv4Addr = GetUanIpv4WithNode(node);
+      Vector position = node->GetObject<MobilityModel>()->GetPosition();
+      auto it = buoyNeighborIdSet.find(id);
+      if (it != buoyNeighborIdSet.end() && !this->m_nbhTable.m_isInit)
+      {
+        //该邻居是flagAddj=1的邻居节点
+        flagAddj = 1;
+      }
+      NeighborInfo newNbhInfo{id,ipv4Addr,position,flagAddj,flagBuoy};
+      this->m_nbhTable.m_table.push_back(newNbhInfo);
+      this->m_nbhTable.m_length++;
+    }
+  }
+
+}
 
 
 }

@@ -1,0 +1,27 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('vbf-hybird', ['core','internet', 'wifi','uan'])
+    module.includes = '.'
+    module.source = [
+        'model/vbf-hybird-packet.cc',
+        'model/vbf-hybird-routing-protocol.cc',
+        'helper/vbf-hybird-helper.cc',
+        ]
+
+    # vbf_test = bld.create_ns3_module_test_library('vbf')
+    # vbf_test.source = [
+    #     ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'vbf-hybird'
+    headers.source = [
+        'model/vbf-hybird-packet.h',
+        'model/vbf-hybird-routing-protocol.h',
+        'helper/vbf-hybird-helper.h',
+        ]
+
+    # if bld.env['ENABLE_EXAMPLES']:
+    #     bld.recurse('examples')
+
+    # bld.ns3_python_bindings()
