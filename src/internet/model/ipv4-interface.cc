@@ -30,7 +30,9 @@
 #include "ns3/node.h"
 #include "ns3/pointer.h"
 #include "ns3/traffic-control-layer.h"
+#define GET_MAC_AUTO
 
+// #define ARPStaticList
 
 namespace ns3 {
 
@@ -280,8 +282,26 @@ Ipv4Interface::Send (Ptr<Packet> p, const Ipv4Header & hdr, Ipv4Address dest)
             }
           if (!found)
             {
+
               NS_LOG_LOGIC ("ARP Lookup");
-              found = arp->Lookup (p, hdr, dest, m_device, m_cache, &hardwareDestination);
+              //可以在这里进行修改，添加一个从ip找到mac地址的函数，用ifdef去避免修改到原来代码
+              #ifdef GET_MAC_AUTO
+              Ptr<const NetDevice> netDevice = GetNetDeviceWithIpv4Address(dest);
+              if(netDevice)
+              {
+                hardwareDestination = netDevice->GetAddress();
+                found = true;
+              }
+              else
+              {
+                NS_LOG_ERROR("Get Mac Error.");
+                found = false;
+              }
+
+              #else
+                found = arp->Lookup (p, hdr, dest, m_device, m_cache, &hardwareDestination);
+              #endif
+
             }
         }
 
@@ -384,6 +404,40 @@ Ipv4Interface::RemoveAddress(Ipv4Address address)
         }
     }
   return Ipv4InterfaceAddress();
+}
+
+//added by ljy for GET_MAC_AUTO
+Ptr<const ns3::NetDevice>
+Ipv4Interface::GetNetDeviceWithIpv4Address(Ipv4Address addr)
+{
+  NS_LOG_FUNCTION(this << addr);
+  uint32_t nNode = NodeList::GetNNodes();
+  Ptr<Node> node;
+  int32_t iif;
+  Ptr<Ipv4L3Protocol> ipv4;
+  for(uint32_t i=0; i<nNode; i++)
+  {
+    node = NodeList::GetNode(i);
+    ipv4 = node->GetObject<Ipv4L3Protocol>();
+    iif = ipv4->GetInterfaceForAddress(addr);
+    if(iif != -1)
+    {
+      break;
+    }
+  }//break时，即拿到了属于该ip的节点和网卡索引id，可以通过node->ipv4中的m_reverseInterfacesContainer去获取对应索引id的Netdevice
+
+  if(iif == -1)
+  {
+    NS_LOG_ERROR("找不到关于" << addr << "的MAC地址.");
+    return Ptr<const NetDevice>();
+  }
+  else
+  {
+    Ptr<const NetDevice> netDevice = ipv4->GetNetDeviceWithInfid(iif);
+    NS_LOG_DEBUG("关于" << addr << "的MAC地址是" << netDevice->GetAddress() << ".");
+    return netDevice;
+  }
+
 }
 
 } // namespace ns3

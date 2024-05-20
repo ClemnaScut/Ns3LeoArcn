@@ -1,0 +1,27 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('select-routing', ['core','internet', 'wifi','uan'])
+    module.includes = '.'
+    module.source = [
+        'model/select-routing-packet.cc',
+        'model/select-routing-protocol.cc',
+        'helper/select-routing-helper.cc',
+        ]
+
+    # vbf_test = bld.create_ns3_module_test_library('vbf')
+    # vbf_test.source = [
+    #     ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'select-routing'
+    headers.source = [
+        'model/select-routing-packet.h',
+        'model/select-routing-protocol.h',
+        'helper/select-routing-helper.h',
+        ]
+
+    # if bld.env['ENABLE_EXAMPLES']:
+    #     bld.recurse('examples')
+
+    # bld.ns3_python_bindings()

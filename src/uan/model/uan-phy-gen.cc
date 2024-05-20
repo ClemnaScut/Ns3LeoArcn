@@ -696,6 +696,13 @@ UanPhyGen::SendPacket (Ptr<Packet> pkt, uint32_t modeNum)
       NS_LOG_DEBUG ("PHY requested to TX while already Transmitting.  Dropping packet.");
       return;
     }
+//半双工通信添加代码------------------------
+  else if (m_state == RX)  //ADD BY LJY 2024-4-29 在要发packet的时候，如果phy层正在接收packet，此时不应该发这个packet，这样才符合半双工
+  {
+    NS_LOG_DEBUG ("PHY requested to TX while reciving.  Dropping packet.");
+    return;
+  }
+//----------------------------------------
   else if (m_state == SLEEP)
     {
       NS_LOG_DEBUG ("PHY requested to TX while sleeping.  Dropping packet.");

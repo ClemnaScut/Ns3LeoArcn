@@ -169,15 +169,19 @@ UanTransducerHd::Receive (Ptr<Packet> packet,
   Simulator::Schedule (txDelay, &UanTransducerHd::RemoveArrival, this, arrival);
   NS_LOG_DEBUG (Simulator::Now ().GetSeconds () << " Transducer in receive");
   if (m_state == RX)
-    {
-      NS_LOG_DEBUG ("Transducer state = RX");
-      UanPhyList::const_iterator it = m_phyList.begin ();
-      for (; it != m_phyList.end (); it++)
-        {
-          NS_LOG_DEBUG ("Calling StartRx");
-          (*it)->StartRxPacket (packet, rxPowerDb, txMode, pdp);
-        }
-    }
+  {
+    NS_LOG_DEBUG ("Transducer state = RX");
+    UanPhyList::const_iterator it = m_phyList.begin ();
+    for (; it != m_phyList.end (); it++)
+      {
+        NS_LOG_DEBUG ("Calling StartRx");
+        (*it)->StartRxPacket (packet, rxPowerDb, txMode, pdp);
+      }
+  }
+  else
+  {
+      NS_LOG_DEBUG ("Transducer state = TX.  Can not receive the packet.");
+  }
 }
 
 void

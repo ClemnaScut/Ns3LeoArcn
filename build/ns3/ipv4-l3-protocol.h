@@ -259,6 +259,10 @@ public:
     (const Ipv4Header & header, Ptr<const Packet> packet,
      DropReason reason, Ptr<Ipv4> ipv4,
      uint32_t interface);
+
+
+  //added by ljy for GET_MAC_AUTO
+  Ptr<const ns3::NetDevice> GetNetDeviceWithInfid(uint32_t Ifid);
    
 protected:
 

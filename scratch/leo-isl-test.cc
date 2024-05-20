@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
   CommandLine cmd;
   std::string orbitFile;
   std::string traceFile;
-  std::string duration = "6500s";
+  std::string duration = "6557s"; //一个周期=6557s
   LogComponentEnable("LeoCircularOrbitTracingExample1",LOG_ALL);
   // LogComponentEnable( "MockChannel",LOG_ALL);
   // LogComponentEnable( "LeoPropagationLossModel",LOG_ALL);
@@ -164,7 +164,8 @@ int main(int argc, char *argv[])
   NS_LOG_INFO("\nThe Satellite Node");
   NodeContainer satellites;
   LeoOrbitNodeHelper orbit;
-  satellites = orbit.Install ( LeoOrbit (1200, 10, 1, 1));
+  //代码已搞定，此处可以均匀生成三颗卫星，然后卫星按一个周期=6557s的规律进行旋转，默认地面站是不移动的
+  satellites = orbit.Install ( LeoOrbit (1200, 10, 1, 3));
   NS_LOG_DEBUG("初始位置安装完成");
   
   //高度1200km
@@ -201,7 +202,7 @@ int main(int argc, char *argv[])
 	NS_LOG_DEBUG ("Assign Uan IP Addresses.");
 	Ipv4InterfaceContainer sateInf = address.Assign(satellite_device);
 
-  Config::Connect ("/NodeList/1/$ns3::MobilityModel/CourseChange",
+  Config::Connect ("/NodeList/3/$ns3::MobilityModel/CourseChange",
                    MakeCallback (&CourseChange));
   std::cout << "Time,Satellite,x,y,z,Speed" << std::endl;
 

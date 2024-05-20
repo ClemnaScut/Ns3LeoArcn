@@ -618,6 +618,7 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<
   Ipv4Address origin = header.GetSource ();
   Ipv4InterfaceAddress iface = m_ipv4->GetAddress (iif, 0); 
 
+ //如果packet源地址是自己ip，则说明是转了一圈回来的包，直接丢弃
   if (IsMyOwnAddress (origin))
   {
     return true;
@@ -689,7 +690,7 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<
 Ptr<Node>
 RoutingProtocol::GetNodeWithIpv4Address(Ipv4Address addr)
 {
-  NS_LOG_FUNCTION(this << addr);
+  // NS_LOG_FUNCTION(this << addr);
   uint32_t nNode = NodeList::GetNNodes();
   for(uint32_t i=0; i<nNode; i++)
   {
@@ -709,7 +710,7 @@ RoutingProtocol::GetNodeWithIpv4Address(Ipv4Address addr)
 Ptr<Node>
 RoutingProtocol::GetNodeWithPosition(Vector pos)
 {
-  NS_LOG_FUNCTION(this << pos);
+  // NS_LOG_FUNCTION(this << pos);
   uint32_t nNode = NodeList::GetNNodes();
   for(uint32_t i=0; i<nNode; i++)
   {
@@ -793,6 +794,7 @@ RoutingProtocol::RecvVBF(Ptr<Socket> socket)
     NS_ASSERT("not the vaild address");
   }
 
+  //由vbfpacket的srcip和pktid唯一标示一个vbfpacket，即可能出现10.1.1.1-1的包 10.1.1.1-2的包 和10.1.1.2-1的包
   vbf_neighborhood *hashPtr= PktTable.GetHash(vbf.GetSenderAddr(), vbf.GetPkNum());
 	//一个节点可能会从不同的邻居处收到这个packet，所以检查是否曾经收到过这个packet，因为sourceIp和pkNum会唯一标识一个packet
   if (hashPtr != NULL) 
@@ -980,6 +982,9 @@ RoutingProtocol::Distance(Ptr<Packet> pkt)
   //the vector from sender to target
   Vector s2t = targetPos - senderPos;
 
+ //1.计算点到平面的距离，这里的代码是有问题的，当时写这里的时候考虑的是flat结构的卫星-浮标-水声模型，
+ //所以节点到路由管道向量构成的平面是垂直于水平面的，即不需要穿过原心(0,0,0)
+ //2.但是如果是放在地球坐标系，那么平面应该是斜着穿过水平面的，即是要穿过原心(0,0,0)的一个平面
   Vector n = {s2t.y, -s2t.x, 0};
   double lengthN = n.GetLength();
   n = {s2t.y/lengthN, -s2t.x/lengthN, 0}; //归一化

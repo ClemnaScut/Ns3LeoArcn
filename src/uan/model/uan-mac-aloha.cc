@@ -93,10 +93,13 @@ UanMacAloha::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address
       header.SetProtocolNumber (protocolNumber);
 
       packet->AddHeader (header);
+      {NS_LOG_DEBUG ("The Phy not in Tx.  can send the packet to.");}
       m_phy->SendPacket (packet, GetTxModeIndex ());
+    
       return true;
     }
   else
+    {NS_LOG_DEBUG ("The Phy in Tx.  drop the packet.");}
     return false;
 }
 

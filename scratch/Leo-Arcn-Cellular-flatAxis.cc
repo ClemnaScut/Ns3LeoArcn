@@ -198,7 +198,7 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(3000),
+    totalTime(1000),
     pcap (true),
     printRoutes (true),
 

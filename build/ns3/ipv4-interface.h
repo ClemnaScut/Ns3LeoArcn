@@ -25,6 +25,7 @@
 #include <list>
 #include "ns3/ptr.h"
 #include "ns3/object.h"
+#include "ns3/node-list.h"
 
 namespace ns3 {
 
@@ -239,6 +240,11 @@ private:
   Ptr<NetDevice> m_device; //!< The associated NetDevice
   Ptr<TrafficControlLayer> m_tc; //!< The associated TrafficControlLayer
   Ptr<ArpCache> m_cache; //!< ARP cache
+
+
+  //added by ljy for GET_MAC_AUTO
+  Ptr<const ns3::NetDevice> GetNetDeviceWithIpv4Address(Ipv4Address addr);
+
 };
 
 } // namespace ns3

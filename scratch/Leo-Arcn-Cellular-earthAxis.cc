@@ -261,7 +261,7 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(5),
+    totalTime(500),
     pcap (true),
     printRoutes (true),
 
@@ -323,7 +323,7 @@ ARCN::Configure(int argc, char* argv[])
 
     //LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
 
-    LogComponentEnable("vbfHybirdRoutingProtocol", LOG_LEVEL_ALL);
+    LogComponentEnable("vbfRoutingProtocol", LOG_LEVEL_ALL);
     // LogComponentEnable("Ipv4L3Protocol",LOG_LEVEL_ALL);
     LogComponentEnable("Leo-Arcn", LOG_LEVEL_DEBUG);
     // LogComponentEnable("LeoGndNodeHelper",LOG_LEVEL_INFO);
@@ -671,7 +671,7 @@ ARCN::InstallInternetStack()
 
 
 	InternetStackHelper stack;
-	stack.SetRoutingHelper (vbfh);
+	stack.SetRoutingHelper (vbf);
 	stack.Install (uanNode);
 	stack.Install (gatewaybuoyNode);
 	stack.Install (leoNode);
@@ -912,9 +912,9 @@ ARCN::NodeSendPacket()
     // Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetInteger (0, 102),0);
     // SendTo(srcsocket, packet, destAddr);
 
-    Ptr<Node> srcsend = uanNode.Get(25);
+    Ptr<Node> srcsend = uanNode.Get(71);
     Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    Ipv4Address destAddr = uan_inter.GetAddress(77,0);
+    Ipv4Address destAddr = uan_inter.GetAddress(72,0);
     SendTo(srcsocket, packet, destAddr); 
 
     NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
@@ -922,10 +922,10 @@ ARCN::NodeSendPacket()
 
 //	erv = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(1/m_lambda));
 //	Simulator::Schedule (Seconds(erv->GetValue()), &AecnExample::NodeSendPacket, this);
-    Time nextSend = Seconds(m_exponentialRandomVariable->GetValue());
-    // Time nextSend = Seconds(1000);
-    Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
-    NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
+    // Time nextSend = Seconds(m_exponentialRandomVariable->GetValue());
+    // // Time nextSend = Seconds(1000);
+    // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
+    // NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
 
 }
 

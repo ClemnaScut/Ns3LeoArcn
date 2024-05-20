@@ -448,6 +448,7 @@ public:
    */
   bool IsRegisteredMulticastAddress (Ipv6Address address, uint32_t interface) const;
 
+
 protected:
   /**
    * \brief Dispose object.
