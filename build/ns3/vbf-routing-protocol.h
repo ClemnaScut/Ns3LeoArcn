@@ -37,6 +37,7 @@
 #include "ns3/ipv4-l3-protocol.h"
 #include <map>
 #include "ns3/vector.h"
+#include "ns3/leo-circular-orbit-mobility-model.h"
 
 
 namespace ns3 {

@@ -18,6 +18,7 @@
 #include "uan-mac-rc-gw.h"
 #include "uan-mac-rc.h"
 #include "uan-mac-sfama-modify.h"
+#include "uan-mac-srtdma-qlearning.h"
 #include "uan-mac-srtdma.h"
 #include "uan-mac.h"
 #include "uan-net-device.h"

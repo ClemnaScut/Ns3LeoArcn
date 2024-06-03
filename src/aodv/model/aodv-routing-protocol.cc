@@ -1076,9 +1076,20 @@ RoutingProtocol::SendRequest (Ipv4Address dst)
 void
 RoutingProtocol::SendTo (Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address destination)
 {
+  // Time delay = Seconds(m_uniformRandomVariable->GetInteger (0, 10));
+  // NS_LOG_DEBUG("DELAY: " << delay.GetSeconds());
+  // Simulator::Schedule(delay, &RoutingProtocol::SendToTrue, this, socket, packet, destination);
+  //为了水声均衡拓扑环境中不发生碰撞，所以要加一个随机延时
   socket->SendTo (packet, 0, InetSocketAddress (destination, AODV_PORT));
-
 }
+
+void
+RoutingProtocol::SendToTrue (Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address destination)
+{
+  socket->SendTo (packet, 0, InetSocketAddress (destination, AODV_PORT));
+}
+
+
 void
 RoutingProtocol::ScheduleRreqRetry (Ipv4Address dst)
 {
@@ -1129,7 +1140,7 @@ RoutingProtocol::RecvAodv (Ptr<Socket> socket)
     {
       NS_ASSERT_MSG (false, "Received a packet from an unknown socket");
     }
-  NS_LOG_DEBUG ("AODV node " << this << " received a AODV packet from " << sender << " to " << receiver);
+  NS_LOG_DEBUG ("AODV " << receiver<<" node " << this << " received a AODV packet from " << sender << ".");
 
   UpdateRouteToNeighbor (sender, receiver);
   TypeHeader tHeader (AODVTYPE_RREQ);
@@ -1425,7 +1436,9 @@ RoutingProtocol::SendReply (RreqHeader const & rreqHeader, RoutingTableEntry con
   packet->AddHeader (tHeader);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
+  
+  SendTo(socket, packet, toOrigin.GetNextHop ());
+  // socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
 }
 
 void
@@ -1460,7 +1473,8 @@ RoutingProtocol::SendReplyByIntermediateNode (RoutingTableEntry & toDst, Routing
   packet->AddHeader (tHeader);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
+  SendTo(socket, packet, toOrigin.GetNextHop ());
+  // socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
 
   // Generating gratuitous RREPs
   if (gratRep)
@@ -1478,7 +1492,8 @@ RoutingProtocol::SendReplyByIntermediateNode (RoutingTableEntry & toDst, Routing
       Ptr<Socket> socket = FindSocketWithInterfaceAddress (toDst.GetInterface ());
       NS_ASSERT (socket);
       NS_LOG_LOGIC ("Send gratuitous RREP " << packet->GetUid ());
-      socket->SendTo (packetToDst, 0, InetSocketAddress (toDst.GetNextHop (), AODV_PORT));
+      SendTo(socket, packetToDst, toOrigin.GetNextHop ());
+      // socket->SendTo (packetToDst, 0, InetSocketAddress (toDst.GetNextHop (), AODV_PORT));
     }
 }
 
@@ -1498,7 +1513,8 @@ RoutingProtocol::SendReplyAck (Ipv4Address neighbor)
   m_routingTable.LookupRoute (neighbor, toNeighbor);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toNeighbor.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (neighbor, AODV_PORT));
+  SendTo(socket, packet, neighbor);
+  // socket->SendTo (packet, 0, InetSocketAddress (neighbor, AODV_PORT));s
 }
 
 void
@@ -1634,7 +1650,8 @@ RoutingProtocol::RecvReply (Ptr<Packet> p, Ipv4Address receiver, Ipv4Address sen
   packet->AddHeader (tHeader);
   Ptr<Socket> socket = FindSocketWithInterfaceAddress (toOrigin.GetInterface ());
   NS_ASSERT (socket);
-  socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
+  SendTo(socket, packet, toOrigin.GetNextHop ());
+  // socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
 }
 
 void
@@ -1809,7 +1826,7 @@ RoutingProtocol::HelloTimerExpire ()
 void
 RoutingProtocol::RreqRateLimitTimerExpire ()
 {
-  NS_LOG_FUNCTION (this);
+  // NS_LOG_FUNCTION (this);
   m_rreqCount = 0;
   m_rreqRateLimitTimer.Schedule (Seconds (1));
 }
@@ -1817,7 +1834,7 @@ RoutingProtocol::RreqRateLimitTimerExpire ()
 void
 RoutingProtocol::RerrRateLimitTimerExpire ()
 {
-  NS_LOG_FUNCTION (this);
+  // NS_LOG_FUNCTION (this);
   m_rerrCount = 0;
   m_rerrRateLimitTimer.Schedule (Seconds (1));
 }
@@ -1977,7 +1994,8 @@ RoutingProtocol::SendRerrWhenNoRouteToForward (Ipv4Address dst,
           toOrigin.GetInterface ());
       NS_ASSERT (socket);
       NS_LOG_LOGIC ("Unicast RERR to the source of the data transmission");
-      socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
+      SendTo(socket, packet, toOrigin.GetNextHop ());
+      // socket->SendTo (packet, 0, InetSocketAddress (toOrigin.GetNextHop (), AODV_PORT));
     }
   else
     {
@@ -1998,7 +2016,8 @@ RoutingProtocol::SendRerrWhenNoRouteToForward (Ipv4Address dst,
             {
               destination = iface.GetBroadcast ();
             }
-          socket->SendTo (packet->Copy (), 0, InetSocketAddress (destination, AODV_PORT));
+          SendTo(socket, packet->Copy (), destination);
+          // socket->SendTo (packet->Copy (), 0, InetSocketAddress (destination, AODV_PORT));
         }
     }
 }
@@ -2118,9 +2137,9 @@ RoutingProtocol::DoInitialize (void)
       m_htimer.SetFunction (&RoutingProtocol::HelloTimerExpire, this);
       // startTime = m_uniformRandomVariable->GetInteger (0, 100);
       // m_htimer.Schedule (MilliSeconds (startTime));
-      startTime = m_uniformRandomVariable->GetInteger (0, 20);
+      startTime = m_uniformRandomVariable->GetInteger (0, 100);
       m_htimer.Schedule (Seconds(startTime));  //适应水声均匀结构的延迟
-      NS_LOG_DEBUG ("Starting at time " << startTime << "ms");
+      NS_LOG_DEBUG ("Starting at time " << startTime << "s");
 
     }
   Ipv4RoutingProtocol::DoInitialize ();

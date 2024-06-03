@@ -214,8 +214,10 @@ int main (int argc, char **argv)
 //	 LogComponentEnable("UanPhyGen", LOG_LEVEL_ALL);
 //	 LogComponentEnable("UanNetDevice", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("UanChannel", LOG_LEVEL_ALL);
-	 LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
+	//  LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("aecnRoutingProtocol", LOG_LEVEL_ALL);
+	 LogComponentEnable("UdpL4Protocol", LOG_LEVEL_ALL);
+
 ////	 LogComponentEnable("V4Ping", LOG_LEVEL_ALL);
 //	 LogComponentEnable("WifiPhy", LOG_LEVEL_ALL);
 ////	 LogComponentEnable("YansWifiChannel", LOG_LEVEL_ALL);

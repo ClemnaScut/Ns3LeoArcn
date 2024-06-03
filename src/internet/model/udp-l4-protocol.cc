@@ -345,6 +345,8 @@ UdpL4Protocol::Receive (Ptr<Packet> packet,
   Ipv4EndPointDemux::EndPoints endPoints =
     m_endPoints->Lookup (header.GetDestination (), udpHeader.GetDestinationPort (),
                          header.GetSource (), udpHeader.GetSourcePort (), interface);
+  NS_LOG_DEBUG ("udp info: " << header.GetSource () << "-" << udpHeader.GetSourcePort () 
+                << "-" << header.GetDestination () << "-" << udpHeader.GetDestinationPort ());      
   if (endPoints.empty ())
     {
       if (this->GetObject<Ipv6L3Protocol> () != 0)

@@ -51,7 +51,7 @@ NS_LOG_COMPONENT_DEFINE ("SelectRoutingProtocol");
 
 namespace select_route {
 
-#define MAX_UAN_NODE 102 //水下节点数
+#define MAX_UAN_NODE 102 //水下节点的最大nodeid
 #define SatelliteId 103
 uint32_t buoyId[] = {25,28,31,71,74,77};
 std::set<uint32_t> buoyIdSet(std::begin(buoyId), std::end(buoyId)) ; //储存buoy节点的NodeId
@@ -409,6 +409,7 @@ RoutingProtocol::uanTableInit(uint32_t nodeId)
   NS_ASSERT(this->m_nbhTable.m_isInit == false);
   auto uanFunc = bind(&RoutingProtocol::GetUanIpv4WithNode,this,std::placeholders::_1);
 
+#if 1
   uint32_t buoyId = findBuoyNbhNode(nodeId);
   if(buoyId != 0)
   {
@@ -421,6 +422,14 @@ RoutingProtocol::uanTableInit(uint32_t nodeId)
    AddNeighborToTable(nodeId+1,NodeType::UAN,uanFunc);
    AddNeighborToTable(nodeId+11,NodeType::UAN,uanFunc);
    AddNeighborToTable(nodeId+12,NodeType::UAN,uanFunc);
+#else //纯水下测试时的代码
+   AddNeighborToTable(nodeId-3,NodeType::UAN,uanFunc);
+   AddNeighborToTable(nodeId-2,NodeType::UAN,uanFunc);
+   AddNeighborToTable(nodeId-1,NodeType::UAN,uanFunc);
+   AddNeighborToTable(nodeId+1,NodeType::UAN,uanFunc);
+   AddNeighborToTable(nodeId+2,NodeType::UAN,uanFunc);
+   AddNeighborToTable(nodeId+3,NodeType::UAN,uanFunc);
+#endif
 
   this->m_nbhTable.m_isInit = true;
   nodeId2Table.insert(std::make_pair(nodeId,&this->m_nbhTable));
@@ -604,7 +613,7 @@ RoutingProtocol::LookupNextHopSatellite(const Ipv4Header &header, const Ipv4Addr
   } 
   else 
   {
-    std::cout << "The map is empty." << std::endl;
+    NS_LOG_DEBUG("The map is empty.");
     return Ipv4Address();
   }
 
@@ -727,9 +736,11 @@ RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header,
   Ipv4Address myUanAddress = m_ipv4->GetAddress(1,0).GetLocal();
   forwardHeader fHeader(myUanAddress);
   p->AddHeader(fHeader);
+  NS_LOG_DEBUG ("fHeader: " << fHeader);
+
 
   Ipv4Address destination = header.GetDestination();
-  Ipv4Address source = header.GetSource();
+  Ipv4Address source = myUanAddress;
   Ipv4Address gateway = LookupNextHop(header,fHeader.GetForwardAddr());
   uint32_t interfaceIdx = LookupInterface(gateway);
 
@@ -741,58 +752,6 @@ RoutingProtocol::RouteOutput (Ptr<Packet> p, const Ipv4Header &header,
   rtentry->SetOutputDevice(m_ipv4->GetNetDevice(interfaceIdx));
   return rtentry;
 
-
-  // if (m_socketAddresses.empty ())
-  //   {
-  //     sockerr = Socket::ERROR_NOROUTETOHOST;
-  //     NS_LOG_LOGIC ("No vbf interfaces");
-  //     Ptr<Ipv4Route> route;
-  //     return route;
-  //   }
-  // sockerr = Socket::ERROR_NOTERROR;
-  // Ptr<Ipv4Route> route;
-  // Ipv4Address dst = header.GetDestination ();
-
-  // //获取本节点的各种信息
-  // Ptr<Ipv4L3Protocol> l3 = m_ipv4->GetObject<Ipv4L3Protocol> (); //ipv4l3protocol
-  // int32_t iif = l3->GetInterfaceForAddress(header.GetSource()); //当前ip地址对应的Ipv4interface索引值
-  // Ipv4InterfaceAddress iface = l3->GetAddress (iif, 0);  //当前ip地址对应的Ipv4interface
-  // Ipv4Address myaddr = m_ipv4->GetAddress (iif, 0).GetLocal (); //该Ipv4interface对应的ip地址，其实就是Header中的source_Ip地址
-
-  // //拿到当前Ipv4Interface的广播地址(子网)
-  // Ipv4Address BroadDest;
-  // if (iface.GetMask () == Ipv4Mask::GetOnes ())
-  //   {
-	//     BroadDest = Ipv4Address ("255.255.255.255");
-  //   }
-  // else
-  //   {
-	//     BroadDest = iface.GetBroadcast ();
-  //   }
-
-
-  // //这里只需要处理单播且目标地址不是自己的情况，因为Ip层广播的情况其实是在ipv4l3protocol中处理的，只有单播情况才会调用RouteOutput找路由
-  // if(dst!=BroadDest && dst!=myaddr)
-  // {
-  //   vbfHeader vbf(vbfTYPE_VBF,m_pkNum,1,dst,myaddr,myaddr,Simulator::Now(),Simulator::Now());
-  //   m_pkNum++;
-  //   Ptr<Packet> vbfpacket = p->Copy();
-  //   vbfpacket->AddHeader(header);//!!这里有待考虑，是为了后面的TargetReceivePacket
-  //   vbfpacket->AddHeader(vbf);
-  //   NS_LOG_DEBUG("In VBFheader, destination is:" << vbf.GetTargetAddr() << ", source is:" << vbf.GetSenderAddr()
-  //                 << ",forwarder address is:" << vbf.GetForwardAddr() << ",hop count is:" << vbf.GetHopCount()
-  //                 << ",packet number is:" << vbf.GetPkNum() << ",packet genarate time is:"<< vbf.GetTimeGenerate().GetSeconds()
-  //                 << ",packet forwarded time is:" << vbf.GetTimeForward().GetSeconds());
-    
-  //   Simulator::Schedule(Seconds(0),&RoutingProtocol::vbfSend, this, vbfpacket, myaddr, dst);
-  //   return Ptr<Ipv4Route> ();
-  // }
-  // else
-  // {
-  //     NS_LOG_DEBUG ("Output device doesn't match. Dropped.");
-  //     sockerr = Socket::ERROR_NOROUTETOHOST;
-  //     return Ptr<Ipv4Route> ();
-  // }
 }
 
 
@@ -841,9 +800,11 @@ bool
 RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<const NetDevice> idev,
                   UnicastForwardCallback ucb, MulticastForwardCallback mcb,
                   LocalDeliverCallback lcb, ErrorCallback ecb)
-{
-  NS_LOG_FUNCTION (this << p->GetUid () << "dest: " << header.GetDestination () << 
-                  "receive in: " << m_ipv4->GetAddress (m_ipv4->GetInterfaceForDevice (idev), 0).GetLocal());
+{ 
+  NS_LOG_FUNCTION(this << header);
+  Ipv4Address recvIp =m_ipv4->GetAddress(m_ipv4->GetInterfaceForDevice (idev), 0).GetLocal();
+  NS_LOG_DEBUG (this << " pkt size: "<< p->GetSerializedSize() << " dest: " << header.GetDestination () << 
+                  " receive in: " << recvIp);
   NS_ASSERT (m_ipv4 != 0);
   NS_ASSERT (p != 0);
   // Check if input device supports IP
@@ -856,6 +817,7 @@ RoutingProtocol::RouteInput (Ptr<const Packet> p, const Ipv4Header &header, Ptr<
   Ptr<Packet> packet = p->Copy ();
   forwardHeader fHeader;
   packet->RemoveHeader(fHeader);
+  NS_LOG_DEBUG ("fHeader: " << fHeader);
 
   if (IsMyOwnAddress (source))
   {

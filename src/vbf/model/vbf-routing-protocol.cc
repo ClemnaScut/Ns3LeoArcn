@@ -231,8 +231,8 @@ RoutingProtocol::GetTypeId (void)
       IntegerValue(1),
       MakeIntegerAccessor(&RoutingProtocol::m_enableRouting),
       MakeIntegerChecker<int>())
-    .AddAttribute ("Width", "Width of VBF. Default is 30000.",
-      DoubleValue(40000),
+    .AddAttribute ("Width", "Width of VBF. Default is 35000.",
+      DoubleValue(35000),
       MakeDoubleAccessor(&RoutingProtocol::m_width),
       MakeDoubleChecker<double>())
     .AddAttribute ("TransRange", "TransRange of the UnderWaterNode. Default is 25000.",
@@ -863,7 +863,7 @@ RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver, double range
 bool
 RoutingProtocol::IsSatellite(Ptr<Node> node)
 {
-  if(node->GetObject<MobilityModel>()->GetPosition().z > 1000000)
+  if(node->GetObject<MobilityModel>()->GetPosition().GetLength() > (LEO_EARTH_RAD_KM+100)*1000)
   return true;
   else return false;
 }
@@ -877,7 +877,8 @@ RoutingProtocol::IsCloseEnough(Ptr<Packet> pkt)
   //   NS_LOG_DEBUG("the Node is Close Enough");
   //   return true;
   // }
-  if(Distance(pkt) <= m_width)  //适应卫星的特殊化管道
+  // Ptr<Node> myNode =  m_ipv4->GetObject<Node>();
+  if(Distance(pkt) <= m_width)  //适应曲面坐标的特殊化管道
   {
     NS_LOG_DEBUG("the Node is Close Enough");
     return true;
@@ -980,20 +981,45 @@ RoutingProtocol::Distance(Ptr<Packet> pkt)
 
 
   //the vector from sender to target
-  Vector s2t = targetPos - senderPos;
-
+  // Vector s2t = targetPos - senderPos;
  //1.计算点到平面的距离，这里的代码是有问题的，当时写这里的时候考虑的是flat结构的卫星-浮标-水声模型，
  //所以节点到路由管道向量构成的平面是垂直于水平面的，即不需要穿过原心(0,0,0)
  //2.但是如果是放在地球坐标系，那么平面应该是斜着穿过水平面的，即是要穿过原心(0,0,0)的一个平面
-  Vector n = {s2t.y, -s2t.x, 0};
-  double lengthN = n.GetLength();
-  n = {s2t.y/lengthN, -s2t.x/lengthN, 0}; //归一化
-  double distance = fabs(n.x*(myPos.x-senderPos.x)+n.y*(myPos.y-senderPos.y)+0)/n.GetLength();
+  // Vector n = {s2t.y, -s2t.x, 0};
+  // double lengthN = n.GetLength();
+  // n = {s2t.y/lengthN, -s2t.x/lengthN, 0}; //归一化
+  // double distance = fabs(n.x*(myPos.x-senderPos.x)+n.y*(myPos.y-senderPos.y)+0)/n.GetLength();
 
-  NS_LOG_DEBUG("Node " << myNode->GetId() << " Distance is " << distance);
+  // NS_LOG_DEBUG("Node " << myNode->GetId() << " Distance is " << distance);
+  // return distance;
 
-  return distance;
-  
+ //2024.5.24修改
+ /**
+  * 进入这里的节点一定是浮标节点或者水下节点，所以不需要用特殊管道，用正常管道即可
+  * 即水下和浮标用圆柱管道，而卫星则默认一定在管道中
+ */
+
+  //the vector from sender to target
+  Vector s2t = targetPos - senderPos;
+  //the vector from sender to myNode
+  Vector s2m = myPos - senderPos;
+
+  double cross_x = s2m.y*s2t.z - s2m.z*s2t.y;
+  double cross_y = s2m.z*s2t.x - s2m.x*s2t.z;
+  double cross_z = s2m.x*s2t.y - s2m.y*s2t.x;
+
+	//求s2t和s2m构成的平行四边形面积
+  double area = sqrt(cross_x*cross_x + cross_y*cross_y + cross_z*cross_z);
+	//求底边长度
+	double length=sqrt(s2t.x*s2t.x + s2t.y*s2t.y + s2t.z*s2t.z);
+  if(length == 0) return 0;
+  double projection = area/length;
+
+  NS_LOG_DEBUG("Node " << myNode->GetId() << " No Hopbyhop Projection Calculate: area is " << area 
+                << " length is " << length << " projection is " << projection);
+
+  return projection;
+
 }
 
 

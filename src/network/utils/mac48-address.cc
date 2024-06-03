@@ -126,7 +126,7 @@ Mac48Address
 Mac48Address::ConvertFrom (const Address &address)
 {
   NS_LOG_FUNCTION (&address);
-  NS_ASSERT (address.CheckCompatible (GetType (), 6));
+  // NS_ASSERT (address.CheckCompatible (GetType (), 6));
   Mac48Address retval;
   address.CopyTo (retval.m_address);
   return retval;

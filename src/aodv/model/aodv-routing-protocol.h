@@ -408,6 +408,10 @@ private:
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
   /// Keep track of the last bcast time
   Time m_lastBcastTime;
+
+
+  void
+  SendToTrue (Ptr<Socket> socket, Ptr<Packet> packet, Ipv4Address destination);
 };
 
 } //namespace aodv

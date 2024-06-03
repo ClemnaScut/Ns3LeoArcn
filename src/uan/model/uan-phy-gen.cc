@@ -721,6 +721,7 @@ UanPhyGen::SendPacket (Ptr<Packet> pkt, uint32_t modeNum)
   m_state = TX;
   UpdatePowerConsumption (TX);
   double txdelay = pkt->GetSize () * 8.0 / txMode.GetDataRateBps ();
+  NS_LOG_DEBUG ("PHY tx use " << txdelay << " time");
   m_pktTx = pkt;
   m_txEndEvent = Simulator::Schedule (Seconds (txdelay), &UanPhyGen::TxEndEvent, this);
   NS_LOG_DEBUG ("PHY " << m_mac->GetAddress () << " notifying listeners");

@@ -19,6 +19,9 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/wifi-helper.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/mobility-helper.h"
 
 using namespace ns3;
 
@@ -37,12 +40,33 @@ main (int argc, char *argv[])
   NodeContainer nodes;
   nodes.Create (2);
 
-  PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  NS_LOG_DEBUG("-----------Initializing Position-----------");
+	MobilityHelper mobility;
+	Ptr<ListPositionAllocator> nodesPositionAlloc = CreateObject<ListPositionAllocator> ();
+  nodesPositionAlloc->Add(Vector(0,0,0));
+  nodesPositionAlloc->Add(Vector(40000,0,0));
+  mobility.SetPositionAllocator (nodesPositionAlloc);
+  mobility.Install (nodes);
 
-  NetDeviceContainer devices;
-  devices = pointToPoint.Install (nodes);
+  NS_LOG_DEBUG("-----------Initializing Wireless-----------");
+  WifiHelper wifiHelper;
+  wifiHelper.SetStandard (WIFI_PHY_STANDARD_80211a);
+  YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  wifiPhy.Set ("RxGain", DoubleValue (0) );
+  wifiPhy.Set ("TxGain", DoubleValue (1)); //TxGain = 1dB
+  wifiPhy.Set("TxPowerStart", DoubleValue(93));
+  wifiPhy.Set("TxPowerEnd", DoubleValue(93));  //TxPower = m_txPowerRadio = 92dbm--35000m 93dmb--40000m
+  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
+
+  wifiPhy.SetChannel (wifiChannel.Create());
+  WifiMacHelper wifiMac;
+  wifiMac.SetType ("ns3::AdhocWifiMac");
+  wifiHelper.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                              "DataMode",StringValue ("OfdmRate6Mbps"),
+                              "ControlMode",StringValue ("OfdmRate6Mbps"));
+
+  NetDeviceContainer wifiDevice = wifiHelper.Install (wifiPhy, wifiMac, nodes);
 
   InternetStackHelper stack;
   stack.Install (nodes);
@@ -50,7 +74,7 @@ main (int argc, char *argv[])
   Ipv4AddressHelper address;
   address.SetBase ("10.1.1.0", "255.255.255.0");
 
-  Ipv4InterfaceContainer interfaces = address.Assign (devices);
+  Ipv4InterfaceContainer interfaces = address.Assign (wifiDevice);
 
   UdpEchoServerHelper echoServer (9);
 

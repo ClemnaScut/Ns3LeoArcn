@@ -185,17 +185,12 @@ class ARCN
 	NodeContainer gatewaybuoyNode;
     NodeContainer leoNode;
 
-    NodeContainer UanSrcNode; //chosen in uanNode
-
 	NetDeviceContainer uan_device;
 	NetDeviceContainer gateway_buoywireless_device;
-    // NetDeviceContainer gateway_satellite_device;
     NetDeviceContainer satellite_device;
 
 	Ipv4InterfaceContainer uan_inter;
 	Ipv4InterfaceContainer gateway_buoywireless_inter;
-	Ipv4InterfaceContainer gateway_buoyuan_inter;
-    Ipv4InterfaceContainer gateway_satellite_inter;
     Ipv4InterfaceContainer satellite_inter;
 
     /* Parameters */
@@ -238,12 +233,10 @@ class ARCN
 
     /* map */
     std::map<Ptr<Node>, Ptr<Socket> > m_Uansockets; //!< send and receive sockets
-	std::map<Ptr<Node>, Ptr<Socket> > m_buoyuansockets; //!< send and receive sockets
 	std::map<Ptr<Node>, Ptr<Socket> > m_buoywifisockets; //!< send and receive sockets
 	std::map<Ptr<Node>, Ptr<Socket> > m_satellitesockets; //!< send and receive sockets
 	std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_UanSktAddr;
 	std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_buoyWifiSktAddr;
-	std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_buoyUanSktAddr;
 	std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_satelliteSktAddr;
 
 	/* map of sub net */
@@ -300,13 +293,14 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(16001),
+    totalTime(401),
     pcap (true),
     printRoutes (true),
 
     numUan(103),
     numgtbuoy(6),
     numLeo(1),
+    // m_uanMacType("ns3::UanMacSrTDMA"),
     m_uanMacType("ns3::UanMacSrTDMA"),
     m_wifiPhyMode("OfdmRate6Mbps"),
     m_depth(-500),
@@ -326,7 +320,7 @@ ARCN::ARCN():
     // m_lambda(0.2)
 {
     m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
-    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(20));
+    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(5));
 }
 
 ARCN::~ARCN()
@@ -335,11 +329,6 @@ ARCN::~ARCN()
   std::map<Ptr<Node>, Ptr<Socket> >::iterator socket;
 
   for (socket = m_Uansockets.begin (); socket != m_Uansockets.end (); socket++)
-    {
-      socket->second->Close ();
-    }
-
-  for (socket = m_buoyuansockets.begin (); socket != m_buoyuansockets.end (); socket++)
     {
       socket->second->Close ();
     }
@@ -360,7 +349,7 @@ bool
 ARCN::Configure(int argc, char* argv[])
 {
 
-    //LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
+    // LogComponentEnable("AodvRoutingProtocol", LOG_LEVEL_ALL);
 
     // LogComponentEnable("SelectRoutingProtocol", LOG_LEVEL_DEBUG);
     // LogComponentEnable("UdpL4Protocol", LOG_LEVEL_ALL);
@@ -374,7 +363,7 @@ ARCN::Configure(int argc, char* argv[])
 
 
 	// LogComponentEnable("UanPhyGen", LOG_LEVEL_ALL);
-    // LogComponentEnable("UanMacSFAMA", LOG_LEVEL_ALL);
+    // LogComponentEnable("UanChannel", LOG_LEVEL_ALL);
 	LogComponentEnableAll(LOG_PREFIX_TIME);
 	LogComponentEnableAll(LOG_PREFIX_NODE);
 	LogComponentEnableAll(LOG_PREFIX_FUNC);
@@ -405,7 +394,9 @@ ARCN::Run()
     CreateDevices (uanHelper,wifiPhy);
     InstallInternetStack ();
     SetupSocket();
-    Simulator::Schedule(Seconds(50), &ARCN::NodeSendPacket, this);
+    Simulator::Schedule(Seconds(200), &ARCN::NodeSendPacket, this);
+    // Simulator::Schedule(Seconds(300), &ARCN::NodeSendPacket, this);
+
 
     NS_LOG_UNCOND("Simulation run "<<totalTime<<" seconds....\n");
     Simulator::Schedule(Seconds(400), &ARCN::Calculate, this);
@@ -497,17 +488,18 @@ ARCN::SetPosition()
         }    
     }
 
-    mobility.SetPositionAllocator (nodesPositionAlloc);
-
     NS_LOG_DEBUG("初始化卫星节点的位置.");
     //Set Leo Node's position
     LonAndLat leoll = {119.90065,20.37697};
     nodesPositionAlloc->Add (getLeoPosition(leoll,1200));
+    NS_LOG_DEBUG("satellite lon: " << leoll.lon << " lat: " << leoll.lat << ".");
+
     mobility.SetPositionAllocator (nodesPositionAlloc);
 
     mobility.Install (uanNode);
     mobility.Install (leoNode);
 
+    mobility.SetPositionAllocator (nodesPositionAlloc);
 
     for(uint32_t i=0; i<uanNode.GetN(); i++)
     {
@@ -537,8 +529,8 @@ ARCN::CreateDevices(UanHelper uanHelper, YansWifiPhyHelper wifiPhy)
     UanTxMode uanMode;
     
     //1.set Mac and Phy
-    uanMode = UanTxModeFactory::CreateMode(UanTxMode::FSK, 5500,
-            5500, 2500, 2000, 2, "Default mode");
+    uanMode = UanTxModeFactory::CreateMode(UanTxMode::FSK, 6000,
+            6000, 2500, 2000, 2, "Default mode");
     UanModesList myModes;
     myModes.AppendMode(uanMode);
     uanHelper.SetPhy("ns3::UanPhyGen", 
@@ -620,23 +612,22 @@ ARCN::InstallInternetStack()
 {
     //--------------------------------------------aodv routing--------------------------------------------
     NS_LOG_DEBUG("-----------Initializing Internet-----------");
-//     AodvHelper aodv;
-// 	aodv.Set("HelloInterval", TimeValue(Seconds(1000)));
-// //	aodv.Set("TimeoutBuffer", UintegerValue(2));
-// 	aodv.Set("NodeTraversalTime", TimeValue(Seconds(2.5)));
-// 	aodv.Set("NextHopWait", TimeValue(Seconds(2.51)));
-// 	aodv.Set("ActiveRouteTimeout", TimeValue(Seconds(2000)));
-// 	aodv.Set("MyRouteTimeout", TimeValue(Seconds(2000)));
-// //	aodv.Set("BlackListTimeout", TimeValue(Seconds(5.6)));
-// 	aodv.Set("DeletePeriod", TimeValue(Seconds(500)));
-// //	aodv.Set("NetDiameter", UintegerValue(35));
-// 	aodv.Set("NetTraversalTime", TimeValue(Seconds(100)));
-// 	aodv.Set("PathDiscoveryTime", TimeValue(Seconds(100)));
-// 	aodv.Set("TtlStart", UintegerValue(20));
+    AodvHelper aodv;
+	aodv.Set("HelloInterval", TimeValue(Seconds(1000))); //interval of sending Hello message
+	aodv.Set("TimeoutBuffer", UintegerValue(2));
+	aodv.Set("NodeTraversalTime", TimeValue(Seconds(15))); //one hop traversal time for packets
+	aodv.Set("NextHopWait", TimeValue(Seconds(15.01))); 
+	aodv.Set("ActiveRouteTimeout", TimeValue(Seconds(2000))); // time while the router is considered to be vaild
+	aodv.Set("MyRouteTimeout", TimeValue(Seconds(2000)));
+	aodv.Set("BlackListTimeout", TimeValue(Seconds(5.6)));
+	aodv.Set("DeletePeriod", TimeValue(Seconds(500)));
+	aodv.Set("NetDiameter", UintegerValue(20));
+	aodv.Set("NetTraversalTime", TimeValue(Seconds(200)));
+	aodv.Set("PathDiscoveryTime", TimeValue(Seconds(200)));
+	aodv.Set("TtlStart", UintegerValue(15));
 
     vbfHelper vbf;
     selectRoutingHelper select;
-    AodvHelper aodv;
 
 
 	InternetStackHelper stack;
@@ -685,19 +676,19 @@ ARCN::InstallInternetStack()
 	// 	m_leo++;
 	// }
 
-	// if (printRoutes)
-	// {
-	// 	Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper>(
-	// 			"arcn-aodv.routes", std::ios::out);
-	// 	aodv.PrintRoutingTableAllAt(Seconds(1800), routingStream);
-	// }
+	if (printRoutes)
+	{
+		Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper>(
+				"arcn-aodv-danbo.routes", std::ios::out);
+		aodv.PrintRoutingTableAllAt(Seconds(294), routingStream);
+	}
 }
 
 
 void
 ARCN::SetupSocket()
 {
-    for(uint32_t i=0; i<uan_device.GetN(); i++)
+     for(uint32_t i=0; i<uan_device.GetN(); i++)
     {
         Ptr<NetDevice> dev = uan_device.Get (i);
         Ptr<Node> uannode = dev->GetNode ();
@@ -836,31 +827,51 @@ ARCN::NodeSendPacket()
     SrcMap_IdSendTime[packet->GetUid()] = sendtime; 
 
 
-    Ptr<Node> srcsend = uanNode.Get(m_uniformRandomVariable->GetValue(0, 102));
-    Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetValue(0, 102),0);
-    SendTo(srcsocket, packet, destAddr); 
-    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
-                 " to " << destAddr);
-    Time nextSend = Seconds(m_exponentiaflRandomVariable->GetValue());
-    // Time nextSend = Seconds(1000);
-    if(Simulator::Now().GetSeconds() < 12000)
-    {
-        Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
-        NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
-    }
-    else
-    {
-        NS_LOG_DEBUG("Stop sending.");
-    }
-
-
-    // Ptr<Node> srcsend = uanNode.Get(92);
+    // Ptr<Node> srcsend = uanNode.Get(m_uniformRandomVariable->GetValue(0, 102));
     // Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    // Ipv4Address destAddr = uan_inter.GetAddress(10,0);
+    // Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetValue(0, 102),0);
     // SendTo(srcsocket, packet, destAddr); 
     // NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
-    //              " to " << destAddr);  
+    //              " to " << destAddr);
+    // Time nextSend = Seconds(m_exponentiaflRandomVariable->GetValue());
+    // // NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
+    // // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
+
+
+    // if(Simulator::Now().GetSeconds() < 12000)
+    // {
+    // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
+    //     NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
+    // }
+    // else
+    // {
+    //     NS_LOG_DEBUG("Stop sending.");
+    // }
+
+
+    Ptr<Node> srcsend = uanNode.Get(40);
+    Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
+    Ipv4Address destAddr = uan_inter.GetAddress(41,0);
+    SendTo(srcsocket, packet, destAddr); 
+    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
+                 " to " << destAddr);  
+    Vector pos1 = NodeList::GetNode(18)->GetObject<MobilityModel>()->GetPosition();
+    Vector pos2 = NodeList::GetNode(29)->GetObject<MobilityModel>()->GetPosition();
+    NS_LOG_DEBUG("distance " << (pos1-pos2).GetLength() << " time " << (pos1-pos2).GetLength()/1500);  
+
+    srcsend = uanNode.Get(18);
+    srcsocket =  m_Uansockets[srcsend];
+    destAddr = uan_inter.GetAddress(29,0);
+    SendTo(srcsocket, packet, destAddr); 
+    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
+                 " to " << destAddr);  
+
+    srcsend = uanNode.Get(31);
+    srcsocket =  m_Uansockets[srcsend];
+    destAddr = uan_inter.GetAddress(20,0);
+    SendTo(srcsocket, packet, destAddr); 
+    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
+                 " to " << destAddr);  
 
 }
 
@@ -924,7 +935,7 @@ ARCN::Calculate()
 
 
     //cauculate the network per 200s
-	Simulator::Schedule (Seconds (200), &ARCN::Calculate, this);//print parameter per 200s
+	Simulator::Schedule (Seconds (400), &ARCN::Calculate, this);//print parameter per 200s
 
 }
 
