@@ -87,7 +87,7 @@ UanMacSrTDMAQ::GetTypeId (void)
                   )
    .AddAttribute ("propagationDelay",
                   "one hop propagation delay",
-                  TimeValue (Seconds (13.44)),
+                  TimeValue (Seconds (13.33)),
                   MakeTimeAccessor (&UanMacSrTDMAQ::m_propTime),
                   MakeTimeChecker ()
                   )
@@ -150,28 +150,99 @@ UanMacSrTDMAQ::GetNodeIdWithMacAddress(const Address &macAddr)
   return -1;
 }
 
+double 
+UanMacSrTDMAQ::calculateDiffOnNeighbor(uint32_t nodeid)
+{
+  uint32_t neibors[6] = {nodeid-12,nodeid-11,nodeid-1,nodeid+1,nodeid+11,nodeid+12};
+  uint32_t neibor;
+  double sumdiff = 0;
+  uint32_t num = 0;
+  // NS_LOG_UNCOND("my Node ID: " << nodeid << " "<< SendPeriod[nodeid]);
+
+  for(uint32_t i=0;i<6;i++)
+  {
+    neibor=neibors[i];
+    if(!checkUanNode(nodeid,neibor))
+    {
+      continue; //不是邻居
+    }
+    else
+    {
+      double diff = abs((SendPeriod[nodeid]-SendPeriod[neibor]));
+      sumdiff += diff;
+      // NS_LOG_UNCOND("Myneibor ID: " << neibor << " " << SendPeriod[neibor]);
+      num++;
+    }
+  }
+
+  // NS_LOG_UNCOND("sumdiff: " << sumdiff);
+  return sumdiff/num;
+}
+
+bool 
+UanMacSrTDMAQ::checkUanNode(uint32_t id1,uint32_t id2)
+{
+  if(id2<0 || id2>102)
+  {
+    return false;
+  }
+
+  if(distanceof2uan(id1,id2) >= 30000)
+  {
+    return false;
+  }
+
+  return true;
+}
+
+double 
+UanMacSrTDMAQ::distanceof2uan(uint32_t id1,uint32_t id2)
+{
+  Ptr<Node> node1 = NodeList::GetNode(id1);
+  Vector p1 = node1->GetObject<MobilityModel>()->GetPosition();
+  Ptr<Node> node2 = NodeList::GetNode(id2);
+  Vector p2 = node2->GetObject<MobilityModel>()->GetPosition();
+
+  double ret = sqrt(pow(p1.x-p2.x,2)+pow(p1.y-p2.y,2)+pow(p1.z-p2.z,2));
+  return ret;
+
+}
+
 
 void
 UanMacSrTDMAQ::PrintSynRate()
 {
-    double sum = 0.0;
-    for(int i = 0; i < 103; ++i) {
-        sum += SendPeriod[i];
-    }
-    double average = sum / 103;
+    // double sum = 0.0;
+    // for(int i = 0; i < 103; ++i) {
+    //     sum += SendPeriod[i];
+    // }
+    // double average = sum / 103;
 
-    // 打印平均值
-    // NS_LOG_UNCOND("Average: " << average);
+    for(int i = 0; i < 103; ++i) {
+        NS_LOG_UNCOND(SendPeriod[i]);
+    }
+
+  double sumDiff=0;
+  for(int i = 0; i < 103; ++i) {
+      double diffOnNeibor = calculateDiffOnNeighbor(i);
+      sumDiff += diffOnNeibor;
+  }
+  
+  NS_LOG_UNCOND("-----------sumDiff " << sumDiff/103);
+
+    // // 打印平均值
+    // // NS_LOG_UNCOND("Average: " << average);
 
     // 打印每个元素与平均值的差值的平方，即计算方差
-    double sumDiff = 0.0;
-    for(int i = 0; i < 103; ++i) {
-        double diff = std::pow(SendPeriod[i] - average,2);
-        sumDiff += diff;
-        // NS_LOG_UNCOND("SendPeriod["<<i<<"] " << diff);
-    }
+    // double sumDiff = 0.0;
+    // for(int i = 0; i < 103; ++i) {
+    //     double diff = std::pow(SendPeriod[i] - average,2);
+    //     sumDiff += diff;
+    // }
+    // NS_LOG_UNCOND("-----------sumDiff " << sumDiff);
 
-    Simulator::Schedule(Seconds(500), &UanMacSrTDMAQ::PrintSynRate);
+  
+    Simulator::Schedule(Seconds(300), &UanMacSrTDMAQ::PrintSynRate);
 }
 
 void
@@ -182,7 +253,7 @@ UanMacSrTDMAQ::SetColor()
   m_nodeid = GetNodeIdWithMacAddress(m_address);
   if(m_nodeid == 0) //选择一个节点作为计算同步率的节点，调用计算同步率的静态函数即可
   {
-    Simulator::Schedule(Seconds(500), &UanMacSrTDMAQ::PrintSynRate);
+    Simulator::Schedule(Seconds(100), &UanMacSrTDMAQ::PrintSynRate);
   }
   NS_LOG_DEBUG("my nodeId is " << m_nodeid);
 
@@ -202,7 +273,7 @@ UanMacSrTDMAQ::SetColor()
 
   //在这里进行时隙事件的循环启动
   Ptr<UniformRandomVariable> m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
-  m_sendTime =  Seconds(m_uniformRandomVariable->GetValue(0,30));
+  m_sendTime =  Seconds(m_uniformRandomVariable->GetValue(0,100));
   NS_LOG_DEBUG("Set sendTime: " << m_sendTime.GetSeconds() << ". Now the Q value is " << m_Qposition << ".");
   Simulator::Schedule(m_sendTime, &UanMacSrTDMAQ::SetSendEvent,this);
 }
@@ -215,6 +286,7 @@ UanMacSrTDMAQ::AttachPhy (Ptr<UanPhy> phy)
   m_phy->SetReceiveOkCallback (MakeCallback (&UanMacSrTDMAQ::RxPacketGood, this));
   m_phy->SetReceiveErrorCallback (MakeCallback (&UanMacSrTDMAQ::RxPacketError, this));
 
+  m_qSlot = m_slotTime/Qdiv;
   Simulator::Schedule(Seconds(10), &UanMacSrTDMAQ::SetColor,this);
 }
 
@@ -226,7 +298,7 @@ UanMacSrTDMAQ::SetSendEvent()
     uint32_t max_value = Qtable[0];
     std::vector<uint32_t> max_indices = {0};
 
-    for (int i = 1; i < 89; ++i) 
+    for (int32_t i = 0; i < Qdiv*m_slotNum; ++i) 
     {
       if (Qtable[i] > max_value) 
       {
@@ -248,8 +320,8 @@ UanMacSrTDMAQ::SetSendEvent()
     int32_t newQposition;
     if(max_indices.size() == 1) //最大Ｑ值只有一个
     {
-      // newQposition = max_indices.front(); //直接改为最大Ｑ值
-      newQposition = std::trunc((max_indices.front() + m_Qposition)/2); //取折中
+      newQposition = max_indices.front(); //直接改为最大Ｑ值
+      // newQposition = std::trunc((max_indices.front() + m_Qposition)/2); //取折中
     }
     else //有多个相同的最大Ｑ值，求出索引的中位数
     {
@@ -268,11 +340,11 @@ UanMacSrTDMAQ::SetSendEvent()
     Time nextSendTime;
     if(newQposition < m_Qposition)
     {
-      nextSendTime = (newQposition-m_Qposition+m_slotNum)*m_transTime;
+      nextSendTime = (newQposition-m_Qposition)*m_qSlot + m_slotNum*m_slotTime;
     }
     else if(newQposition > m_Qposition)
     {
-      nextSendTime = (newQposition-m_Qposition)*m_transTime;
+      nextSendTime = (newQposition-m_Qposition)*m_qSlot;
     }
     else if(newQposition == m_Qposition)
     {
@@ -282,7 +354,6 @@ UanMacSrTDMAQ::SetSendEvent()
     //更新自己的Ｑ值位置
     m_Qposition = newQposition;
     //记录节点下一轮发送的时间点，用于计算同步率
-    SendPeriod[m_nodeid] = (Simulator::Now()+nextSendTime).GetSeconds();
   }
 
 }
@@ -292,6 +363,7 @@ UanMacSrTDMAQ::SendPacket()
 {
   // NS_LOG_FUNCTION(this);
   m_sendTime = Simulator::Now();
+  SendPeriod[m_nodeid] = m_sendTime.GetSeconds();
   //查询7x7的邻居调度表，根据调度表去安排节点在哪个时隙发送数据包
   for(uint32_t i=0; i<ColorVector.size(); i++)
   {
@@ -304,7 +376,7 @@ UanMacSrTDMAQ::SendPacket()
       else
       {
         uint32_t sendSlot = myColorArray[m_color][i];
-        Time sendTime = (sendSlot-1)*m_transTime;
+        Time sendTime = (sendSlot-1)*m_slotTime;
         NS_LOG_DEBUG("颜色为"<<m_color<<"的节点关于颜色为"<<i<<"的邻居的发送数据包队列非空,在" << sendTime.GetSeconds() << "s后发送数据.");
         Simulator::Schedule(sendTime,&UanMacSrTDMAQ::SendPacketFromColorQueue,this,i);
       }
@@ -312,8 +384,9 @@ UanMacSrTDMAQ::SendPacket()
   }
 
   //下一轮发送
-  Time nextSendPacket = m_propTime + 21*m_transTime;
+  Time nextSendPacket = m_propTime + 21*m_slotTime;
   Simulator::Schedule (nextSendPacket, &UanMacSrTDMAQ::SetSendEvent,this);
+  // Simulator::Schedule (nextSendPacket, &UanMacSrTDMAQ::SendPacket,this);
 }
 
 
@@ -343,23 +416,25 @@ UanMacSrTDMAQ::RxPacketGood (Ptr<Packet> pkt, double sinr, UanTxMode txMode)
   Time recvTime = Simulator::Now ();
   NS_LOG_DEBUG ("Receiving Packet from " << header.GetSrc() << " for " << header.GetDest());
   uint32_t neighborColor = m_Address2Color[header.GetSrc()];
-  uint32_t sendSlot = myColorArray[m_color][neighborColor];
-  Time neighborSendTime = recvTime-sendSlot*m_slotTime-m_propTime;
+  uint32_t destColor = m_Address2Color[header.GetDest()];
+  uint32_t sendSlot = myColorArray[destColor][neighborColor];
+  Time neighborSendTime = recvTime-(sendSlot-1)*m_slotTime-m_propTime-m_transTime; //计算这个邻居发包起始时间是没问题的
+
   NS_LOG_DEBUG ("recvTime: " << recvTime.GetSeconds());
   NS_LOG_DEBUG ("Neighbor SendTime: " << neighborSendTime.GetSeconds() << " My SendTime:  " << m_sendTime.GetSeconds());
 
-  double interval = (neighborSendTime.GetSeconds() - m_sendTime.GetSeconds())/m_transTime.GetSeconds();
+  double interval = (neighborSendTime.GetSeconds() - m_sendTime.GetSeconds())/m_qSlot.GetSeconds();
   int32_t intervalNum = std::trunc(interval);
   NS_LOG_DEBUG("The interval is " << interval << " -> " << intervalNum);
 
   int32_t QvalueIncrease = m_Qposition+intervalNum;
-  if(QvalueIncrease >= m_slotNum)
+  while(QvalueIncrease >= m_slotNum*Qdiv)
   {
-    QvalueIncrease -=m_slotNum;
+    QvalueIncrease -=m_slotNum*Qdiv;
   }
-  if(QvalueIncrease < 0)
+  while(QvalueIncrease < 0)
   {
-    QvalueIncrease +=m_slotNum;
+    QvalueIncrease +=m_slotNum*Qdiv;
   }
 
   Qtable[QvalueIncrease]++;

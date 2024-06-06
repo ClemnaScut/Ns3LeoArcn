@@ -114,7 +114,6 @@ UanMacAloha::AttachPhy (Ptr<UanPhy> phy)
   m_phy = phy;
   m_phy->SetReceiveOkCallback (MakeCallback (&UanMacAloha::RxPacketGood, this));
   m_phy->SetReceiveErrorCallback (MakeCallback (&UanMacAloha::RxPacketError, this));
-
 }
 void
 UanMacAloha::RxPacketGood (Ptr<Packet> pkt, double sinr, UanTxMode txMode)

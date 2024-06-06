@@ -45,7 +45,7 @@ LeoCircularOrbitMobilityModel::GetTypeId ()
     // TODO check value limits
     .AddAttribute ("Inclination",
                    "The inclination of the orbital plane in degrees",
-                   DoubleValue (10.0),
+                   DoubleValue (20.0),
                    MakeDoubleAccessor (&LeoCircularOrbitMobilityModel::SetInclination,
                    		       &LeoCircularOrbitMobilityModel::GetInclination),
                    MakeDoubleChecker<double> ())
@@ -172,8 +172,10 @@ LeoCircularOrbitMobilityModel::CalcPosition (Time t) const
 {
   if(!flagLeo)
   {
-    double lon = CalcLongitude ();
-    double incl = 10*M_PI/180;
+    m_lon_init=119;
+    m_lat_init=20;
+    double lon = m_lon_init*M_PI/180;
+    double incl = m_lat_init*M_PI/180;
     // account for orbit latitude and earth rotation offset
     Vector3D x = Product (m_orbitHeight*1000, Vector3D (cos (incl) * cos (lon),
                 cos (incl) * sin (lon),
@@ -198,17 +200,18 @@ Vector3D
 LeoCircularOrbitMobilityModel::nextPrecisionPosition() const
 {
   int T = 2*M_PI*sqrt(pow(m_orbitHeight,3)/LEO_EARTH);
-  double incl = GetInclination ();
+  double incl = m_lat_init;
   double Precision_lat = double((4*incl)/T);
   double Precision_lon = double(360.0/T);
   NS_LOG_DEBUG(Precision_lat << " " << Precision_lon);
 
   //出bug的轮次  y: 1.10352e-06 Lat: -10 Lon 180
   //->          y: -7145.86 Lat: -9.9939 Lon -179.945
-  if(m_position.y >= 0)
+  //已解决
+  if(m_lon >= m_lon_init || m_lon <=m_lon_init-180 )
   {
     m_lat = m_lat - Precision_lat;
-    if(m_lat <= -10)
+    if(m_lat <= -m_lat_init)
     {
       m_lat = -(m_lat + incl*2);
     }
@@ -219,10 +222,10 @@ LeoCircularOrbitMobilityModel::nextPrecisionPosition() const
       m_lon = m_lon - 360;
     }
   }
-  else if(m_position.y < 0)
+  else if(m_lon_init-180 < m_lon && m_lon < m_lon_init)
   {
     m_lat = m_lat + Precision_lat;
-    if(m_lat >= 10)
+    if(m_lat >= m_lat_init)
     {
       m_lat = incl*2 - m_lat;
     }

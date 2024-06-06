@@ -149,7 +149,7 @@ class ARCN
 	bool printRoutes;  /// Print routes if true
 	Ptr<UniformRandomVariable> m_uniformRandomVariable;
 	Ptr<ExponentialRandomVariable> m_exponentialRandomVariable;
-    double m_lambda;
+    // double m_lambda;
 
 
     /* Node */

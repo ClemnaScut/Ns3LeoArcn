@@ -132,6 +132,8 @@ private:
   */
   mutable double m_lat;
   mutable double m_lon;
+  mutable double m_lat_init;
+  mutable double m_lon_init;
 //over 2024/04/04
 
   /**

@@ -62,106 +62,6 @@
 
 using namespace ns3;
 
-struct LonAndLat
-{
-    double lon;
-    double lat;
-};
-
-
-//通过某一点的经纬度lon,lat计算另一点的经纬度,x为向右多少个间隔,y为向下多少个间隔，distance为间隔距离
-LonAndLat CalculateLL(double lon, double lat, int x, int y, double dstx, double dsty)
-{
-    double arc = 6371.393 * 1000;
-    // cout << sin(a*2*M_PI/ 360) << " " << cos(lat/180) << endl;
-    // cout << dst * sin(a*2*M_PI/ 360) / (arc * cos(lat/180) * 2 * M_PI/ 360) << endl;
-
-    lon += dstx * x / (arc * cos(lat/180) * 2 * M_PI/ 360);
-    lat += dsty * y / (arc * 2 * M_PI / 360);
-    LonAndLat newll;
-    newll.lat = lat;
-    newll.lon = lon;
-
-    return newll;
-}
-
-
-//根据三维坐标计算该点的经纬度
-LonAndLat position2LL(Vector position)
-{
-    double LatSource = atan(position.z/(sqrt(position.x*position.x + position.y*position.y)))/(M_PI / 180);
-    double LonSource = atan(position.y / position.x)/(M_PI / 180);
-    if(position.x<0 && position.y>0) LonSource+=180;
-    if(position.x<0 && position.y<0) LonSource-=180;
-    // NS_LOG_DEBUG("LatSource: " << LatSource << " LonSource " << LonSource );
-    LonAndLat retll;
-    retll.lat = LatSource;
-    retll.lon = LonSource;
-
-    return retll;
-}
-
-
-//根据经纬度计算水下节点实际3维坐标，假设水下节点距离地心半径=地球半径
-Vector
-GetUanPosition (const LonAndLat &loc)
-{
-  double lat = loc.lat * (M_PI / 180);
-  double lon = loc.lon * (M_PI / 180);
-  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
-  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
-  // 			   LEO_GND_RAD_EARTH * cos (lat));
-
-  //修改版
-  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
-  Vector pos = Vector3D (LEO_GND_RAD_EARTH * cos (lat) * cos (lon),
-  			   LEO_GND_RAD_EARTH * cos (lat) * sin (lon),
-  			   LEO_GND_RAD_EARTH * sin (lat));
-
-  return pos;
-}
-
-//根据经纬度计算浮标节点实际3维坐标，假设浮标节点距离地心半径=地球半径+浮标高度：取浮标高度为500
-Vector
-GetBuoyPosition (const LonAndLat &loc)
-{
-
-  double lat = loc.lat * (M_PI / 180);
-  double lon = loc.lon * (M_PI / 180);
-  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
-  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
-  // 			   LEO_GND_RAD_EARTH * cos (lat));
-
-  //修改版
-  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
-  double buoyHighth = 500;
-  Vector pos = Vector3D ((LEO_GND_RAD_EARTH+buoyHighth) * cos (lat) * cos (lon),
-  			   (LEO_GND_RAD_EARTH+buoyHighth)* cos (lat) * sin (lon),
-  			   (LEO_GND_RAD_EARTH+buoyHighth) * sin (lat));
-
-  return pos;
-}
-
-//计算卫星的三维坐标
-Vector
-getLeoPosition (LonAndLat leoll, double height)
-{
-  double lat = leoll.lat * (M_PI / 180);
-  double lon = leoll.lon * (M_PI / 180);
-  // Vector3D pos = Vector3D (LEO_GND_RAD_EARTH * sin (lat) * cos (lon),
-  // 			   LEO_GND_RAD_EARTH * sin (lat) * sin (lon),
-  // 			   LEO_GND_RAD_EARTH * cos (lat));
-
-  //修改版
-  //以北纬为正，以东经为正　　（即处在北纬0-90°＋东经0-90°的视为八个象限中的第一象限）
-  Vector pos = Vector((LEO_GND_RAD_EARTH+height*1000) * cos (lat) * cos (lon),
-  			   (LEO_GND_RAD_EARTH+height*1000) * cos (lat) * sin (lon),
-  			   (LEO_GND_RAD_EARTH+height*1000) * sin (lat));
-
-  return pos;
-}
-
-
 NS_LOG_COMPONENT_DEFINE("Leo-Arcn");
 
 class ARCN
@@ -296,7 +196,7 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(10000),
+    totalTime(120000),
     pcap (true),
     printRoutes (true),
 
@@ -390,7 +290,7 @@ ARCN::Configure(int argc, char* argv[])
 	cmd.Parse(argc, argv);
 
     m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
-    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(5)); 
+    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(1)); 
 	return true;
 }
 

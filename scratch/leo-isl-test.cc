@@ -54,10 +54,11 @@ NodeSendPacket(NodeContainer nodec, Ipv4InterfaceContainer ipv4c)
     Ptr<Node> srcsend = nodec.Get(0);
     Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
     Ipv4Address destAddr = ipv4c.GetAddress(0,0);
+    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
+              " to " << destAddr);
     SendTo(srcsocket, packet, destAddr); 
 
-    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
-                 " to " << destAddr);
+
 
 //	erv = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(1/m_lambda));
 //	Simulator::Schedule (Seconds(erv->GetValue()), &AecnExample::NodeSendPacket, this);
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
   CommandLine cmd;
   std::string orbitFile;
   std::string traceFile;
-  std::string duration = "6557s"; //一个周期=6557s
+  std::string duration = "6557s"; //一个周期=6557s--1200km
   LogComponentEnable("LeoCircularOrbitTracingExample1",LOG_ALL);
   // LogComponentEnable( "MockChannel",LOG_ALL);
   // LogComponentEnable( "LeoPropagationLossModel",LOG_ALL);
@@ -120,8 +121,8 @@ int main(int argc, char *argv[])
 
 
   NS_LOG_INFO("\nThe Gnd Node");
-  double lat_o = 10;
-  double lon_o = 0;
+  double lat_o = 20;
+  double lon_o = 119;
 
   NodeContainer uanNode;
   LeoGndNodeHelper ground;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
   NodeContainer satellites;
   LeoOrbitNodeHelper orbit;
   //代码已搞定，此处可以均匀生成三颗卫星，然后卫星按一个周期=6557s的规律进行旋转，默认地面站是不移动的
-  satellites = orbit.Install ( LeoOrbit (1200, 10, 1, 3));
+  satellites = orbit.Install ( LeoOrbit (1200, 20, 1, 3));
   NS_LOG_DEBUG("初始位置安装完成");
   
   //高度1200km
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
 	NS_LOG_DEBUG ("Assign Uan IP Addresses.");
 	Ipv4InterfaceContainer sateInf = address.Assign(satellite_device);
 
-  Config::Connect ("/NodeList/3/$ns3::MobilityModel/CourseChange",
+  Config::Connect ("/NodeList/1/$ns3::MobilityModel/CourseChange",
                    MakeCallback (&CourseChange));
   std::cout << "Time,Satellite,x,y,z,Speed" << std::endl;
 
@@ -212,7 +213,6 @@ int main(int argc, char *argv[])
   // if(Psource.x<0 && Psource.y>0) LonSource+=180;
   // if(Psource.x<0 && Psource.y<0) LonSource-=180;
   // NS_LOG_DEBUG("time:" << Simulator::Now().GetSeconds() << " LatSource: " << LatSource << " LonSource " << LonSource );
-
 
 	NS_LOG_DEBUG ("Assign Socket.");
   for(uint32_t i=0; i<satellite_device.GetN(); i++)
@@ -242,8 +242,9 @@ int main(int argc, char *argv[])
       //cur_socket->SetIpRecvTtl (true);
       m_UanSktAddr.insert(std::make_pair(cur_socket,iface));
       m_Uansockets.insert(std::make_pair(uannode,cur_socket));
-      NS_LOG_DEBUG("Uan Node Uan ID =" << uannode->GetId() << " Socket =" <<cur_socket << " Ipv4Address " << ip_addr);
+      NS_LOG_DEBUG("Uan/Satellite Node Uan ID =" << uannode->GetId() << " Socket =" <<cur_socket << " Ipv4Address " << ip_addr);
   }
+
 
 	NS_LOG_DEBUG ("Start Send.");
   NodeSendPacket(uanNode,sateInf);

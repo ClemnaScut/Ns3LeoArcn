@@ -115,13 +115,13 @@ UanMacSrTDMA::GetTypeId (void)
     .AddConstructor<UanMacSrTDMA> ()
     .AddAttribute ("transmissionDelay",
                   "packet transmission delay",
-                  TimeValue (Seconds (0.6)), //set phyRate = 6000bit/s --> txDelay = 0.58s --> 0.6s
+                  TimeValue (Seconds (0.32)), //set phyRate = 5500bit/s --> txDelay = 0.623s --> 0.64s
                   MakeTimeAccessor (&UanMacSrTDMA::m_transTime),
                   MakeTimeChecker ()
                   )
    .AddAttribute ("propagationDelay",
                   "one hop propagation delay",
-                  TimeValue (Seconds (14)),
+                  TimeValue (Seconds (13.44)),
                   MakeTimeAccessor (&UanMacSrTDMA::m_propTime),
                   MakeTimeChecker ()
                   )

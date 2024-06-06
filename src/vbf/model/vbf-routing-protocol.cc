@@ -781,7 +781,7 @@ RoutingProtocol::RecvVBF(Ptr<Socket> socket)
   }
   else if(iface.GetBroadcast() == Ipv4Address("10.1.2.255"))
   {
-    Range = 50000;
+    Range = 40000;
     Speed = 300000000;
   }
   else if(iface.GetBroadcast() == Ipv4Address("10.1.3.255"))
@@ -847,10 +847,13 @@ RoutingProtocol::ConsiderNew(Ptr<Packet> pkt, Ipv4Address receiver, double range
       double Delay = CalculateDelay(pkt, range,speed); 
       SetDelayTimer(packet, Delay);
     }
+#if 0
     else if(IsSatellite(myNode)) //卫星节点，测试代码
     {
       SetDelayTimer(packet, 0);
     }
+#else
+#endif
     else //节点不在路由管道，直接抛弃packet
     {
       pkt=0;
@@ -982,7 +985,7 @@ RoutingProtocol::Distance(Ptr<Packet> pkt)
 
   //the vector from sender to target
   // Vector s2t = targetPos - senderPos;
- //1.计算点到平面的距离，这里的代码是有问题的，当时写这里的时候考虑的是flat结构的卫星-浮标-水声模型，
+ //1.计算点到平面的距离，这里的代码是有问题的，当时写这里的时候考虑的是平面结构的卫星-浮标-水声模型，
  //所以节点到路由管道向量构成的平面是垂直于水平面的，即不需要穿过原心(0,0,0)
  //2.但是如果是放在地球坐标系，那么平面应该是斜着穿过水平面的，即是要穿过原心(0,0,0)的一个平面
   // Vector n = {s2t.y, -s2t.x, 0};

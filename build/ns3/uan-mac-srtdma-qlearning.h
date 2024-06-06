@@ -91,10 +91,13 @@ private:
   //Time slot = 2* Time transmission
   Time m_slotTime;
 
+  Time m_qSlot;
+
 /*Q值表*/
-  uint32_t Qtable[89] = {0};
+  int32_t Qdiv = 2;
+  uint32_t Qtable[84] = {0};
   int32_t m_Qposition = 0;
-  int32_t m_slotNum = 84;
+  int32_t m_slotNum = 42;
   Time m_sendTime;
   //同步率计算
   static const uint32_t uanNum = 103;
@@ -154,6 +157,17 @@ private:
   static void
   PrintSynRate();
 
+  /**
+   * 计算自己身边邻居的发送时间和自己的差距的方差　之和
+  */
+  static double 
+  calculateDiffOnNeighbor(uint32_t nodeid);
+
+  static bool
+  checkUanNode(uint32_t id1,uint32_t id2);
+
+  static double
+  distanceof2uan(uint32_t id1, uint32_t id2);
 
 protected:
   virtual void DoDispose ();
