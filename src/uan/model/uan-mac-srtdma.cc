@@ -8,12 +8,15 @@
 #include "ns3/log.h"
 #include "uan-phy.h"
 #include "uan-header-common.h"
+#include "ns3/boolean.h"
+#include "ns3/random-variable-stream.h"
 
 #include <iostream>
 
 namespace ns3
 {
 //着色表，根据特定网络结构修改
+// 1.arcn
 uint32_t Color1[] = {3,10,17,24,31,38,45,52,59,66,73,80,87,94,101};
 std::set<uint32_t> Color1Set(std::begin(Color1), std::end(Color1));
 uint32_t Color2[] = {4,11,18,25,32,39,46,53,60,67,74,81,88,95,102};
@@ -29,17 +32,24 @@ std::set<uint32_t> Color6Set(std::begin(Color6), std::end(Color6));
 uint32_t Color7[] = {6,13,20,27,34,41,48,55,62,69,76,83,90,97};
 std::set<uint32_t> Color7Set(std::begin(Color7), std::end(Color7));
 
-std::vector<std::set<uint32_t>*> ColorVector = {&Color1Set,&Color2Set,&Color3Set,&Color4Set,&Color5Set,&Color6Set,&Color7Set};
-uint32_t myColorArray[7][7] = {
-  {0,1,10,14,19,8,4},
-  {1,0,5,20,17,13,7},
-  {10,5,0,2,12,15,18},
-  {14,20,2,0,6,11,16},
-  {19,17,12,6,0,3,9},
-  {8,13,15,11,3,0,21},
-  {4,7,18,16,9,21,0}
-};
+//2.7*7 uan
+// uint32_t Color1[] = {2,10,11,19,27,28,36};
+// std::set<uint32_t> Color1Set(std::begin(Color1), std::end(Color1));
+// uint32_t Color2[] = {3,12,20,29,37};
+// std::set<uint32_t> Color2Set(std::begin(Color2), std::end(Color2));
+// uint32_t Color3[] = {0,8,16,17,25,34};
+// std::set<uint32_t> Color3Set(std::begin(Color3), std::end(Color3));
+// uint32_t Color4[] = {7,15,24,32,33};
+// std::set<uint32_t> Color4Set(std::begin(Color4), std::end(Color4));
+// uint32_t Color5[] = {1,9,18,26,35};
+// std::set<uint32_t> Color5Set(std::begin(Color5), std::end(Color5));
+// uint32_t Color6[] = {4,13,21,22,30,38};
+// std::set<uint32_t> Color6Set(std::begin(Color6), std::end(Color6));
+// uint32_t Color7[] = {5,6,14,23,31};
+// std::set<uint32_t> Color7Set(std::begin(Color7), std::end(Color7));
 
+
+// //3.7 uan
 // uint32_t Color1[] = {0};
 // std::set<uint32_t> Color1Set(std::begin(Color1), std::end(Color1));
 // uint32_t Color2[] = {1};
@@ -55,16 +65,16 @@ uint32_t myColorArray[7][7] = {
 // uint32_t Color7[] = {6};
 // std::set<uint32_t> Color7Set(std::begin(Color7), std::end(Color7));
 
-// std::vector<std::set<uint32_t>*> ColorVector = {&Color1Set,&Color2Set,&Color3Set,&Color4Set,&Color5Set,&Color6Set,&Color7Set};
-// uint32_t myColorArray[7][7] = {
-//   {0,1,10,14,19,8,4},
-//   {1,0,5,20,17,13,7},
-//   {10,5,0,2,12,15,18},
-//   {14,20,2,0,6,11,16},
-//   {19,17,12,6,0,3,9},
-//   {8,13,15,11,3,0,21},
-//   {4,7,18,16,9,21,0}
-// };
+std::vector<std::set<uint32_t>*> ColorVector = {&Color1Set,&Color2Set,&Color3Set,&Color4Set,&Color5Set,&Color6Set,&Color7Set};
+uint32_t myColorArray[7][7] = {
+  {0,1,10,14,19,8,4},
+  {1,0,5,20,17,13,7},
+  {10,5,0,2,12,15,18},
+  {14,20,2,0,6,11,16},
+  {19,17,12,6,0,3,9},
+  {8,13,15,11,3,0,21},
+  {4,7,18,16,9,21,0}
+};
 
 
 
@@ -124,6 +134,12 @@ UanMacSrTDMA::GetTypeId (void)
                   TimeValue (Seconds (13.44)),
                   MakeTimeAccessor (&UanMacSrTDMA::m_propTime),
                   MakeTimeChecker ()
+                  )
+   .AddAttribute ("multiplexingFlag",
+                  "Use transmission slot multiplexing",
+                  BooleanValue (true),
+                  MakeBooleanAccessor (&UanMacSrTDMA::m_flag),
+                  MakeBooleanChecker ()
                   )
   ;
   return tid;
@@ -202,7 +218,10 @@ UanMacSrTDMA::SetColor()
   m_Address2Color[m_address] = m_color;
 
   //在这里进行时隙事件的循环启动
-  SendPacket();
+  Ptr<UniformRandomVariable> m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
+  Time m_sendTime = Seconds(m_uniformRandomVariable->GetValue(0,30));
+  // Time m_sendTime = Seconds(0);
+  Simulator::Schedule(m_sendTime, &UanMacSrTDMA::SendPacket,this);
 }
 
 void
@@ -231,7 +250,15 @@ UanMacSrTDMA::SendPacket()
       else
       {
         uint32_t sendSlot = myColorArray[m_color][i];
-        Time sendTime = (sendSlot-1)*m_transTime;
+        Time sendTime;
+        if(m_flag)
+        {
+          sendTime = (sendSlot-1)*m_transTime;
+        }
+        else
+        {
+          sendTime = (sendSlot-1)*m_propTime;  
+        }
         NS_LOG_DEBUG("颜色为"<<m_color<<"的节点关于颜色为"<<i<<"的邻居的发送数据包队列非空,在" << sendTime.GetSeconds() << "s后发送数据.");
         Simulator::Schedule(sendTime,&UanMacSrTDMA::SendPacketFromColorQueue,this,i);
       }
@@ -239,7 +266,15 @@ UanMacSrTDMA::SendPacket()
   }
 
   //下一轮发送
-  Time nextSendPacket = m_propTime + 21*m_transTime;
+  Time nextSendPacket;
+  if(m_flag)
+  {
+    nextSendPacket = m_propTime + 21*m_transTime;
+  }
+  else
+  {
+    nextSendPacket = 21*m_propTime;  
+  }
   Simulator::Schedule (nextSendPacket, &UanMacSrTDMA::SendPacket,this);
 }
 

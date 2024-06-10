@@ -1,4 +1,4 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+ /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2009 IITP RAS
  *
@@ -74,9 +74,23 @@ public:
    */
   int64_t AssignStreams (NodeContainer c, int64_t stream);
 
+
+  //2024-6-7
+  void SetSatelliteId(std::vector<uint32_t> v);
+  void SetBuoyId(std::vector<uint32_t> v);
+  void SetUanMaxId(uint32_t id);
+  void SetBuoyNbhId(std::vector<uint32_t> v);
+  void SetBuoySatelliteMode(bool flag);
+
 private:
   /** the factory to create vbf routing object */
   ObjectFactory m_agentFactory;
+  //2024-6-7
+  std::vector<uint32_t> m_satelliteId; //卫星容器，储存卫星ID
+  std::vector<uint32_t>  m_buoyId; //浮标容器，储存浮标ID
+  std::vector<uint32_t> m_buoynhbId; //浮标的邻居水下节点ID
+  uint32_t m_uanMaxNodeId; //水下节点最大id
+  bool m_bsmode = false; //是否带有卫星节点和浮标节点
 };
 
 }

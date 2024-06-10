@@ -293,7 +293,7 @@ private:
 
 //-----------------------------------------------------------------------------
 ARCN::ARCN():
-    totalTime(401),
+    totalTime(4001),
     pcap (true),
     printRoutes (true),
 
@@ -301,7 +301,8 @@ ARCN::ARCN():
     numgtbuoy(6),
     numLeo(1),
     // m_uanMacType("ns3::UanMacSrTDMA"),
-    m_uanMacType("ns3::UanMacSrTDMA"),
+    // m_uanMacType("ns3::UanMacSrTDMA"),
+    m_uanMacType("ns3::UanMacAloha"),
     m_wifiPhyMode("OfdmRate6Mbps"),
     m_depth(-500),
     m_interval(20000),
@@ -355,7 +356,7 @@ ARCN::Configure(int argc, char* argv[])
     // LogComponentEnable("UdpL4Protocol", LOG_LEVEL_ALL);
     // LogComponentEnable("UanMacSrTDMA", LOG_LEVEL_ALL);
     // LogComponentEnable("Ipv4L3Protocol",LOG_LEVEL_ALL);
-    LogComponentEnable("Leo-Arcn", LOG_LEVEL_DEBUG);
+    // LogComponentEnable("Leo-Arcn", LOG_LEVEL_DEBUG);
     // LogComponentEnable("LeoGndNodeHelper",LOG_LEVEL_INFO);
     // LogComponentEnable("LeoPropagationLossModel",LOG_LEVEL_INFO);
     // LogComponentEnable("MockNetDevice", LOG_LEVEL_DEBUG);
@@ -628,7 +629,10 @@ ARCN::InstallInternetStack()
 
     vbfHelper vbf;
     selectRoutingHelper select;
-
+    select.SetBuoySatelliteMode(true);
+    select.SetUanMaxId(uanNode.GetN()-1);
+    select.SetBuoyId(std::vector<uint32_t>({25,28,31,71,74,77}));
+    select.SetSatelliteId(std::vector<uint32_t>({103}));
 
 	InternetStackHelper stack;
 	stack.SetRoutingHelper (select);
@@ -827,15 +831,15 @@ ARCN::NodeSendPacket()
     SrcMap_IdSendTime[packet->GetUid()] = sendtime; 
 
 
-    // Ptr<Node> srcsend = uanNode.Get(m_uniformRandomVariable->GetValue(0, 102));
-    // Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    // Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetValue(0, 102),0);
-    // SendTo(srcsocket, packet, destAddr); 
-    // NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
-    //              " to " << destAddr);
-    // Time nextSend = Seconds(m_exponentiaflRandomVariable->GetValue());
-    // // NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
-    // // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
+    Ptr<Node> srcsend = uanNode.Get(m_uniformRandomVariable->GetValue(0, 102));
+    Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
+    Ipv4Address destAddr = uan_inter.GetAddress(m_uniformRandomVariable->GetValue(0, 102),0);
+    SendTo(srcsocket, packet, destAddr); 
+    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
+                 " to " << destAddr);
+    Time nextSend = Seconds(m_exponentiaflRandomVariable->GetValue());
+    NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
+    Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
 
 
     // if(Simulator::Now().GetSeconds() < 12000)
@@ -849,29 +853,18 @@ ARCN::NodeSendPacket()
     // }
 
 
-    Ptr<Node> srcsend = uanNode.Get(40);
-    Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
-    Ipv4Address destAddr = uan_inter.GetAddress(41,0);
-    SendTo(srcsocket, packet, destAddr); 
-    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
-                 " to " << destAddr);  
-    Vector pos1 = NodeList::GetNode(18)->GetObject<MobilityModel>()->GetPosition();
-    Vector pos2 = NodeList::GetNode(29)->GetObject<MobilityModel>()->GetPosition();
-    NS_LOG_DEBUG("distance " << (pos1-pos2).GetLength() << " time " << (pos1-pos2).GetLength()/1500);  
+    // Ptr<Node> srcsend = uanNode.Get(40);
+    // Ptr<Socket> srcsocket =  m_Uansockets[srcsend];
+    // Ipv4Address destAddr = uan_inter.GetAddress(41,0);
+    // SendTo(srcsocket, packet, destAddr); 
+    // NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
+    //              " to " << destAddr);  
+    // Vector pos1 = NodeList::GetNode(18)->GetObject<MobilityModel>()->GetPosition();
+    // Vector pos2 = NodeList::GetNode(29)->GetObject<MobilityModel>()->GetPosition();
+    // NS_LOG_DEBUG("distance " << (pos1-pos2).GetLength() << " time " << (pos1-pos2).GetLength()/1500);  
 
-    srcsend = uanNode.Get(18);
-    srcsocket =  m_Uansockets[srcsend];
-    destAddr = uan_inter.GetAddress(29,0);
-    SendTo(srcsocket, packet, destAddr); 
-    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
-                 " to " << destAddr);  
 
-    srcsend = uanNode.Get(31);
-    srcsocket =  m_Uansockets[srcsend];
-    destAddr = uan_inter.GetAddress(20,0);
-    SendTo(srcsocket, packet, destAddr); 
-    NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< srcsend->GetId() << 
-                 " to " << destAddr);  
+
 
 }
 

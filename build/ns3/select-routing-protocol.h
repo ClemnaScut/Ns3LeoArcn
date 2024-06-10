@@ -52,7 +52,6 @@ enum class NodeType:int
 
 using InitFunc = std::function<Ipv4Address(Ptr<Node>)>;
 
-
 struct NeighborInfo
 {
   uint32_t n_nodeid;
@@ -82,48 +81,6 @@ class NeighborInfoTable
     void PrintTable();
 };
 
-// ------------------------------------------Hash Table---------------------------------------------------
-
-
-#define MAX_NEIGHBOR 10
-#define WINDOW_SIZE  19
-
-/// @brief 用于储存邻居位置信息的结构体
-struct vbf_neighborhood{
-  //邻居数，用于查看已经存在多少个邻居转发过此packet
-  int number;
-  /*创建了一个长度为MAX_NEIGHBOR的Vector数组，比如neighbor[0]为数组首元素，它是一个Vector对象，
-  存放了三维信息：neighbor[0].x，neighbor[0].y，neighbor[0].z*/
-  Vector neighbor[MAX_NEIGHBOR]; 
-  double neighborFactor[MAX_NEIGHBOR];
-};
-
-typedef std::pair<Ipv4Address, unsigned int> hash_entry; 
-//ipv4address:VBFpacket-source_ip  //u_int: VBFpacket-pakcetNum
-
-/**
- * \ingroup aqua-sim-ng
- *
- * \brief Packet Hash table for VBF to assist in specialized tables.
- */
-/*当节点收到一个VBFpacket，会先调用GetHash，
-即查找当前节点的hashTable是否已经存过这个VBFpacket，有则不处理这个VBFpacket（代表这个是重复的）。
-若没有接收过这个VBFpacket，则会把这个VBFpacket中存放的source_ip和packetUid生成一条hash_entry，
-调用PutInHash存放到这个节点的hashTable中。*/
-class AquaSimPktHashTable {
-public:
-  std::map<hash_entry,vbf_neighborhood*> m_htable; //每一个hash_entry对应一个vbf_neighborhood
-
-  AquaSimPktHashTable();
-  ~AquaSimPktHashTable();
-
-  //m_htable表能够存放的entry数目
-  int  m_windowSize; 
-  void Reset();
-  // void PutInHash(Ipv4Address sAddr, unsigned int pkNum, double);
-  void PutInHash(Ipv4Address sAddr, unsigned int pkNum, Vector p, double factor);
-  vbf_neighborhood* GetHash(Ipv4Address senderAddr, unsigned int pkt_num);
-}; 
 
 
 // ----------------------------------------- --Routing Protocol---------------------------------------------------
@@ -166,39 +123,36 @@ public:
 
   NeighborInfoTable m_nbhTable;  //NeighborTabel 2024 4.11 定义为public是因为其他实例需要访问
 
+  //2024-6-7
+  void SetSatelliteId(std::vector<uint32_t> v);
+  void SetBuoyId(std::vector<uint32_t> v);
+  void SetUanMaxId(uint32_t id);
+  void SetBuoyNbhId(std::vector<uint32_t> v);
+  void SetBuoySatelliteMode(bool flag);
+
+
 protected:
   virtual void DoInitialize (void);
 
 private:
-  double m_width;
-  int m_pkNum;
-  /// whether to enable the hopbyhop model. default: false
-  int m_hopByHop;
-  /// if true, VBF can perform routing functionality. Otherwise, not perform, default:true
-  int m_enableRouting; 
-  double m_priority;
-  double m_TransRange;
-  double m_SoundSpeed;
-  AquaSimPktHashTable PktTable;
-  /// the width is used to test if the node is close enough to the path specified by the packet
-
-  Vector m_targetPos;
   Ptr<UniformRandomVariable> m_uniformRandomVariable;
 
 
   /// IP protocol
   Ptr<Ipv4> m_ipv4;
-  /// Raw unicast socket per each IP interface, map socket -> iface address (IP + mask)
-  std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_socketAddresses;
-  /// Raw subnet directed broadcast socket per each IP interface, map socket -> iface address (IP + mask)
-  std::map< Ptr<Socket>, Ipv4InterfaceAddress > m_socketSubnetBroadcastAddresses;
   /// Loopback device
   Ptr<NetDevice> m_loopNet;
 
+
+  //select_routing
   static std::map<uint32_t, NeighborInfoTable*> nodeId2Table;
 
-
-
+  //2024-6-7
+  std::vector<uint32_t> m_satelliteId; //卫星容器，储存卫星ID
+  std::vector<uint32_t>  m_buoyId; //浮标容器，储存浮标ID
+  std::vector<uint32_t> m_buoynhbId; //浮标的邻居水下节点ID
+  uint32_t m_uanMaxNodeId; //水下节点最大nodeid
+  bool m_bsmode; //是否带有卫星节点和浮标节点
 
 private:
 

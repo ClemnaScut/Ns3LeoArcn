@@ -84,6 +84,8 @@ private:
   Time m_transTime;
   //Time propagation
   Time m_propTime;
+  //是否使用传播时隙复用
+  bool m_flag;
 
   /**
    * Receive packet from lower layer (passed to PHY as callback).

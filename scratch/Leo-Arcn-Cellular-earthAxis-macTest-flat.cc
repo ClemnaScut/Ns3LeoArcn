@@ -204,8 +204,8 @@ ARCN::ARCN():
     numgtbuoy(6),
     numLeo(1),
     // m_uanMacType("ns3::UanMacAloha"),
-    m_uanMacType("ns3::UanMacSrTDMAQ"),
-    // m_uanMacType("ns3::UanMacSrTDMA"),
+    // m_uanMacType("ns3::UanMacSrTDMAQ"),
+    m_uanMacType("ns3::UanMacSrTDMA"),
     m_wifiPhyMode("OfdmRate6Mbps"),
     m_depth(-500),
     m_interval(20000),
@@ -290,7 +290,7 @@ ARCN::Configure(int argc, char* argv[])
 	cmd.Parse(argc, argv);
 
     m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
-    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(1)); 
+    m_exponentiaflRandomVariable = CreateObjectWithAttributes<ExponentialRandomVariable>("Mean",DoubleValue(2)); 
 	return true;
 }
 
@@ -510,7 +510,10 @@ ARCN::InstallInternetStack()
 
     vbfHelper vbf;
     selectRoutingHelper select;
-
+    select.SetBuoySatelliteMode(true);
+    select.SetUanMaxId(uanNode.GetN()-1);
+    select.SetBuoyId(std::vector<uint32_t>({25,28,31,71,74,77}));
+    select.SetSatelliteId(std::vector<uint32_t>({103}));
 
 	InternetStackHelper stack;
 	stack.SetRoutingHelper (select);
@@ -716,12 +719,12 @@ ARCN::NodeSendPacket()
     NS_LOG_DEBUG("Packet "<<packet->GetUid()<<" has been sent from "<< m_UanSktAddr[srcsocket].GetLocal() << 
                  " to " << destAddr);
     Time nextSend = Seconds(m_exponentiaflRandomVariable->GetValue());
-    // Time nextSend = Seconds(100);
-    NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
-    Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
+    // Time nextSend = Seconds(1000);
+    // NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
+    // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
 
 
-    // if(Simulator::Now().GetSeconds() < 12000)
+    // if(Simulator::Now().GetSeconds() < 10000)
     // {
     // Simulator::Schedule(nextSend, &ARCN::NodeSendPacket, this);
     //     NS_LOG_DEBUG("next Packet will be sent after " << nextSend.GetSeconds() << "s.");
@@ -780,9 +783,9 @@ ARCN::Calculate()
 	EnergyConsum = 0;  //Uan energy consumption.
 	calculatecount++;
 
-	double uan_consumed;
-	double buoy_uan_consumed;
-	double buoy_wifi_consumed;
+	double uan_consumed=0;
+	double buoy_uan_consumed=0;
+	double buoy_wifi_consumed=0;
 
 	NS_LOG_INFO("-----------Collect the node energy consumption.-----------");
 
@@ -802,8 +805,6 @@ ARCN::Calculate()
                 << ". buoyWifi_consumed:" <<buoy_wifi_consumed );
 	EnergyConsum = uan_consumed + buoy_uan_consumed + buoy_wifi_consumed;
     //拿到的是总的能量消耗，所以算效率也需要用总发送接受bit来计算
-
-
 
 
 	NS_LOG_INFO("-----------Collect the End to End Delay.-----------");

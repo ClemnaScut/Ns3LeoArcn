@@ -23,6 +23,7 @@
 #include "ns3/log.h"
 #include "uan-phy.h"
 #include "uan-header-common.h"
+#include "ns3/random-variable-stream.h"
 
 #include <iostream>
 
@@ -94,7 +95,11 @@ UanMacAloha::Enqueue (Ptr<Packet> packet, uint16_t protocolNumber, const Address
 
       packet->AddHeader (header);
       {NS_LOG_DEBUG ("The Phy not in Tx.  can send the packet to.");}
-      m_phy->SendPacket (packet, GetTxModeIndex ());
+      
+      Ptr<UniformRandomVariable> m_uniformRandomVariable = CreateObject<UniformRandomVariable>();
+      Time sendTime =  Seconds(m_uniformRandomVariable->GetValue(0,3));
+      Simulator::Schedule(sendTime,&UanPhy::SendPacket,m_phy,packet,GetTxModeIndex());
+      // m_phy->SendPacket (packet, GetTxModeIndex ());
     
       return true;
     }

@@ -43,9 +43,49 @@ Ptr<Ipv4RoutingProtocol>
 selectRoutingHelper::Create (Ptr<Node> node) const
 {
   Ptr<select_route::RoutingProtocol> agent = m_agentFactory.Create<select_route::RoutingProtocol> ();
+  //2024-6-7
+  agent->SetBuoySatelliteMode(m_bsmode);
+  agent->SetUanMaxId(m_uanMaxNodeId);
+  agent->SetSatelliteId(m_satelliteId);
+  agent->SetBuoyNbhId(m_buoynhbId);
+  agent->SetBuoyId(m_buoyId);
+
   node->AggregateObject (agent);
   return agent;
 }
+
+void
+selectRoutingHelper::SetSatelliteId(std::vector<uint32_t> v)
+{
+  m_satelliteId = v;
+}
+
+
+void 
+selectRoutingHelper::SetBuoyId(std::vector<uint32_t> v)
+{
+  m_buoyId = v;
+}
+
+void 
+selectRoutingHelper::SetUanMaxId(uint32_t id)
+{
+  m_uanMaxNodeId=id;
+}
+
+void
+selectRoutingHelper::SetBuoyNbhId(std::vector<uint32_t> v)
+{
+  m_buoynhbId=v;
+}
+
+void
+selectRoutingHelper::SetBuoySatelliteMode(bool flag)
+{
+  m_bsmode=flag;
+}
+
+
 
 void 
 selectRoutingHelper::Set (std::string name, const AttributeValue &value)
@@ -65,26 +105,26 @@ selectRoutingHelper::AssignStreams (NodeContainer c, int64_t stream)
       NS_ASSERT_MSG (ipv4, "Ipv4 not installed on node");
       Ptr<Ipv4RoutingProtocol> proto = ipv4->GetRoutingProtocol ();
       NS_ASSERT_MSG (proto, "Ipv4 routing not installed on node");
-      Ptr<select_route::RoutingProtocol> vbf = DynamicCast<select_route::RoutingProtocol> (proto);
-      if (vbf)
+      Ptr<select_route::RoutingProtocol> select = DynamicCast<select_route::RoutingProtocol> (proto);
+      if (select)
         {
-          currentStream += vbf->AssignStreams (currentStream);
+          currentStream += select->AssignStreams (currentStream);
           continue;
         }
-      // vbf may also be in a list
+      // select may also be in a list
       Ptr<Ipv4ListRouting> list = DynamicCast<Ipv4ListRouting> (proto);
       if (list)
         {
           int16_t priority;
           Ptr<Ipv4RoutingProtocol> listProto;
-          Ptr<select_route::RoutingProtocol> listvbf;
+          Ptr<select_route::RoutingProtocol> listselect;
           for (uint32_t i = 0; i < list->GetNRoutingProtocols (); i++)
             {
               listProto = list->GetRoutingProtocol (i, priority);
-              listvbf = DynamicCast<select_route::RoutingProtocol> (listProto);
-              if (listvbf)
+              listselect = DynamicCast<select_route::RoutingProtocol> (listProto);
+              if (listselect)
                 {
-                  currentStream += listvbf->AssignStreams (currentStream);
+                  currentStream += listselect->AssignStreams (currentStream);
                   break;
                 }
             }
